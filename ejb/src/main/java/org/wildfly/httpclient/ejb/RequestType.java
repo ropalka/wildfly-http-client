@@ -21,10 +21,6 @@ package org.wildfly.httpclient.ejb;
 import static io.undertow.util.Methods.DELETE;
 import static io.undertow.util.Methods.GET;
 import static io.undertow.util.Methods.POST;
-import static org.wildfly.httpclient.ejb.EjbConstants.EJB_CANCEL_PATH;
-import static org.wildfly.httpclient.ejb.EjbConstants.EJB_DISCOVER_PATH;
-import static org.wildfly.httpclient.ejb.EjbConstants.EJB_INVOKE_PATH;
-import static org.wildfly.httpclient.ejb.EjbConstants.EJB_OPEN_PATH;
 
 import io.undertow.util.HttpString;
 
@@ -33,10 +29,10 @@ import io.undertow.util.HttpString;
  */
 enum RequestType {
 
-    START_INVOCATION(POST, EJB_INVOKE_PATH),
-    CANCEL_INVOCATION(DELETE, EJB_CANCEL_PATH),
-    CREATE_SESSION(POST, EJB_OPEN_PATH),
-    DISCOVER(GET, EJB_DISCOVER_PATH);
+    START_INVOCATION(POST, "/invoke"),
+    CANCEL_INVOCATION(DELETE, "/cancel"),
+    CREATE_SESSION(POST, "/open"),
+    DISCOVER(GET, "/discover");
 
     private final HttpString method;
     private final String path;
