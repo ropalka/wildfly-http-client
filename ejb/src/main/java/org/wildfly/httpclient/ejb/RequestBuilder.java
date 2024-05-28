@@ -21,6 +21,8 @@ package org.wildfly.httpclient.ejb;
 import static io.undertow.util.Headers.ACCEPT;
 import static io.undertow.util.Headers.CONTENT_TYPE;
 
+import static org.wildfly.httpclient.common.Protocol.VERSION_PATH;
+import static org.wildfly.httpclient.ejb.Constants.EJB_CONTEXT;
 import static org.wildfly.httpclient.ejb.Constants.EJB_DISCOVERY_RESPONSE;
 import static org.wildfly.httpclient.ejb.Constants.EJB_EXCEPTION;
 import static org.wildfly.httpclient.ejb.Constants.INVOCATION_ACCEPT;
@@ -184,13 +186,16 @@ final class RequestBuilder {
         if (prefix != null) {
             sb.append(prefix);
         }
-        appendPath(sb, "ejb", false);
-        appendPath(sb, "v" + version, false);
+        appendPath(sb, EJB_CONTEXT, false);
+        appendPath(sb, VERSION_PATH + version, false);
         appendPath(sb, requestType.getPath(), false);
     }
 
     private static void appendPath(final StringBuilder sb, final String path, final boolean encode) {
-        sb.append("/").append(path == null || path.isEmpty() ? "-" : encode ? encode(path, UTF_8) : path);
+        if (path == null || !path.startsWith("/")) {
+            sb.append("/");
+        }
+        sb.append(path == null || path.isEmpty() ? "-" : encode ? encode(path, UTF_8) : path);
     }
 
 }
