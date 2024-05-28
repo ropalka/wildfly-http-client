@@ -144,14 +144,12 @@ class HttpEJBReceiver extends EJBReceiver {
 
 
         EjbContextData ejbData = targetContext.getAttachment(EJB_CONTEXT_DATA);
-        HttpEJBInvocationBuilder builder = new HttpEJBInvocationBuilder()
-                .setInvocationType(HttpEJBInvocationBuilder.InvocationType.METHOD_INVOCATION)
+        RequestBuilder builder = new RequestBuilder()
+                .setRequestType(RequestType.START_INVOCATION)
+                .setLocator(locator)
                 .setMethod(clientInvocationContext.getInvokedMethod())
-                .setAppName(locator.getAppName())
-                .setModuleName(locator.getModuleName())
-                .setDistinctName(locator.getDistinctName())
                 .setView(clientInvocationContext.getViewClass().getName())
-                .setBeanName(locator.getBeanName());
+                .setVersion(targetContext.getProtocolVersion());
         if (locator instanceof StatefulEJBLocator) {
             builder.setBeanId(Base64.getUrlEncoder().encodeToString(locator.asStateful().getSessionId().getEncodedForm()));
         }
@@ -173,7 +171,6 @@ class HttpEJBReceiver extends EJBReceiver {
             }
         }
         boolean compressResponse = receiverContext.getClientInvocationContext().isCompressResponse();
-        builder.setVersion(targetContext.getProtocolVersion());
         ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
         if (compressResponse) {
             request.getRequestHeaders().put(Headers.ACCEPT_ENCODING, Headers.GZIP.toString());
@@ -291,14 +288,11 @@ class HttpEJBReceiver extends EJBReceiver {
         targetContext.awaitSessionId(true, authenticationConfiguration);
         CompletableFuture<SessionID> result = new CompletableFuture<>();
 
-        HttpEJBInvocationBuilder builder = new HttpEJBInvocationBuilder()
-                .setInvocationType(HttpEJBInvocationBuilder.InvocationType.STATEFUL_CREATE)
-                .setAppName(locator.getAppName())
-                .setModuleName(locator.getModuleName())
-                .setDistinctName(locator.getDistinctName())
+        RequestBuilder builder = new RequestBuilder()
+                .setRequestType(RequestType.CREATE_SESSION)
+                .setLocator(locator)
                 .setView(locator.getViewType().getName())
-                .setBeanName(locator.getBeanName());
-        builder.setVersion(targetContext.getProtocolVersion());
+                .setVersion(targetContext.getProtocolVersion());
         ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
         targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
                     Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
@@ -356,17 +350,15 @@ class HttpEJBReceiver extends EJBReceiver {
             }
         }
         targetContext.awaitSessionId(false, authenticationConfiguration);
-        HttpEJBInvocationBuilder builder = new HttpEJBInvocationBuilder()
-                .setInvocationType(HttpEJBInvocationBuilder.InvocationType.CANCEL)
-                .setAppName(locator.getAppName())
-                .setModuleName(locator.getModuleName())
-                .setDistinctName(locator.getDistinctName())
+        RequestBuilder builder = new RequestBuilder()
+                .setRequestType(RequestType.CANCEL_INVOCATION)
+                .setLocator(locator)
                 .setCancelIfRunning(cancelIfRunning)
                 .setInvocationId(receiverContext.getClientInvocationContext().getAttachment(INVOCATION_ID))
-                .setBeanName(locator.getBeanName());
+                .setVersion(targetContext.getProtocolVersion());
         final CompletableFuture<Boolean> result = new CompletableFuture<>();
-        builder.setVersion(targetContext.getProtocolVersion());
-        targetContext.sendRequest(builder.createRequest(targetContext.getUri().getPath()), sslContext, authenticationConfiguration, null, (stream, response, closeable) -> {
+        ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
+        targetContext.sendRequest(request, sslContext, authenticationConfiguration, null, (stream, response, closeable) -> {
             try {
                 result.complete(true);
                 IoUtils.safeClose(stream);
