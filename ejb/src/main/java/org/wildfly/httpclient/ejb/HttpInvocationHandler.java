@@ -77,7 +77,7 @@ import static org.wildfly.httpclient.ejb.Constants.JSESSIONID_COOKIE_NAME;
  *
  * @author Stuart Douglas
  */
-class HttpInvocationHandler extends RemoteHTTPHandler {
+final class HttpInvocationHandler extends RemoteHTTPHandler {
 
     private final Association association;
     private final ExecutorService executorService;
