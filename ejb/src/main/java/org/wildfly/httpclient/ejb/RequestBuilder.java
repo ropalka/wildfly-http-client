@@ -21,12 +21,12 @@ package org.wildfly.httpclient.ejb;
 import static io.undertow.util.Headers.ACCEPT;
 import static io.undertow.util.Headers.CONTENT_TYPE;
 
-import static org.wildfly.httpclient.ejb.EjbConstants.EJB_DISCOVERY_RESPONSE;
-import static org.wildfly.httpclient.ejb.EjbConstants.EJB_EXCEPTION;
-import static org.wildfly.httpclient.ejb.EjbConstants.INVOCATION_ACCEPT;
-import static org.wildfly.httpclient.ejb.EjbConstants.INVOCATION_ID;
-import static org.wildfly.httpclient.ejb.EjbConstants.INVOCATION;
-import static org.wildfly.httpclient.ejb.EjbConstants.SESSION_OPEN;
+import static org.wildfly.httpclient.ejb.Constants.EJB_DISCOVERY_RESPONSE;
+import static org.wildfly.httpclient.ejb.Constants.EJB_EXCEPTION;
+import static org.wildfly.httpclient.ejb.Constants.INVOCATION_ACCEPT;
+import static org.wildfly.httpclient.ejb.Constants.INVOCATION_ID;
+import static org.wildfly.httpclient.ejb.Constants.INVOCATION;
+import static org.wildfly.httpclient.ejb.Constants.SESSION_OPEN;
 import static org.wildfly.httpclient.ejb.RequestType.CANCEL_INVOCATION;
 import static org.wildfly.httpclient.ejb.RequestType.CREATE_SESSION;
 import static org.wildfly.httpclient.ejb.RequestType.DISCOVER;
