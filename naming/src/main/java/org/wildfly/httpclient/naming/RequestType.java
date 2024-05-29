@@ -25,32 +25,22 @@ import static io.undertow.util.Methods.GET;
 import static io.undertow.util.Methods.PATCH;
 import static io.undertow.util.Methods.POST;
 import static io.undertow.util.Methods.PUT;
-import static org.wildfly.httpclient.naming.NamingConstants.BIND_PATH;
-import static org.wildfly.httpclient.naming.NamingConstants.CREATE_SUBCONTEXT_PATH;
-import static org.wildfly.httpclient.naming.NamingConstants.DESTROY_SUBCONTEXT_PATH;
-import static org.wildfly.httpclient.naming.NamingConstants.LIST_PATH;
-import static org.wildfly.httpclient.naming.NamingConstants.LIST_BINDINGS_PATH;
-import static org.wildfly.httpclient.naming.NamingConstants.LOOKUP_PATH;
-import static org.wildfly.httpclient.naming.NamingConstants.LOOKUP_LINK_PATH;
-import static org.wildfly.httpclient.naming.NamingConstants.REBIND_PATH;
-import static org.wildfly.httpclient.naming.NamingConstants.RENAME_PATH;
-import static org.wildfly.httpclient.naming.NamingConstants.UNBIND_PATH;
 
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 enum RequestType {
 
-    BIND(PUT, BIND_PATH),
-    CREATE_SUBCONTEXT(PUT, CREATE_SUBCONTEXT_PATH),
-    DESTROY_SUBCONTEXT(DELETE, DESTROY_SUBCONTEXT_PATH),
-    LIST(GET, LIST_PATH),
-    LIST_BINDINGS(GET, LIST_BINDINGS_PATH),
-    LOOKUP(POST, LOOKUP_PATH),
-    LOOKUP_LINK(POST, LOOKUP_LINK_PATH),
-    REBIND(PATCH, REBIND_PATH),
-    RENAME(PATCH, RENAME_PATH),
-    UNBIND(DELETE, UNBIND_PATH);
+    BIND(PUT, "/bind"),
+    CREATE_SUBCONTEXT(PUT, "/create-subcontext"),
+    DESTROY_SUBCONTEXT(DELETE, "/dest-subctx"),
+    LIST(GET, "/list"),
+    LIST_BINDINGS(GET, "/list-bindings"),
+    LOOKUP(POST, "/lookup"),
+    LOOKUP_LINK(POST, "/lookuplink"),
+    REBIND(PATCH, "/rebind"),
+    RENAME(PATCH, "/rename"),
+    UNBIND(DELETE, "/unbind");
 
     private final HttpString method;
     private final String path;
