@@ -32,6 +32,8 @@ import static org.wildfly.httpclient.naming.RequestType.LOOKUP;
 import static org.wildfly.httpclient.naming.RequestType.REBIND;
 import static org.wildfly.httpclient.naming.RequestType.RENAME;
 import static org.wildfly.httpclient.naming.RequestType.UNBIND;
+import static org.wildfly.httpclient.naming.Serializer.deserializeObject;
+import static org.wildfly.httpclient.naming.Serializer.serializeObject;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -41,16 +43,13 @@ import io.undertow.util.Headers;
 import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.StatusCodes;
 import org.jboss.marshalling.ContextClassResolver;
-import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
-import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.ContentType;
 import org.wildfly.httpclient.common.ElytronIdentityHandler;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
 import org.wildfly.httpclient.common.HttpServerHelper;
 import org.wildfly.httpclient.common.HttpServiceConfig;
-import org.wildfly.httpclient.common.NoFlushByteOutput;
 
 import javax.naming.Binding;
 import javax.naming.Context;
@@ -238,9 +237,7 @@ public class HttpRemoteNamingService {
                 Unmarshaller unmarshaller = classResolverFilter != null ?
                         marshallerFactory.createUnmarshaller(new FilterClassResolver(classResolverFilter)):
                         marshallerFactory.createUnmarshaller();
-                unmarshaller.start(new InputStreamByteInput(inputStream));
-                Object object = unmarshaller.readObject();
-                unmarshaller.finish();
+                Object object = deserializeObject(unmarshaller, inputStream);
                 doOperation(name, object);
             } catch (Exception e) {
                 if (e instanceof NamingException) {
@@ -262,10 +259,7 @@ public class HttpRemoteNamingService {
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, VALUE.toString());
         HttpNamingServerObjectResolver resolver = new HttpNamingServerObjectResolver(exchange);
         Marshaller marshaller = httpServiceConfig.getHttpMarshallerFactory(exchange).createMarshaller(resolver);
-        marshaller.start(new NoFlushByteOutput(Marshalling.createByteOutput(exchange.getOutputStream())));
-        marshaller.writeObject(result);
-        marshaller.finish();
-        marshaller.flush();
+        serializeObject(marshaller, exchange.getOutputStream(), result);
     }
 
     @Deprecated

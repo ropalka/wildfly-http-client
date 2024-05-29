@@ -1,0 +1,58 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2024 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.wildfly.httpclient.naming;
+
+import org.jboss.marshalling.InputStreamByteInput;
+import org.jboss.marshalling.Marshaller;
+import org.jboss.marshalling.Marshalling;
+import org.jboss.marshalling.Unmarshaller;
+import org.wildfly.httpclient.common.NoFlushByteOutput;
+
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+
+/**
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ */
+final class Serializer {
+
+    private Serializer() {
+        // forbidden instantiation
+    }
+
+    static Object deserializeObject(final Unmarshaller unmarshaller, final InputStream is) throws IOException, ClassNotFoundException {
+        try (is) {
+            unmarshaller.start(new InputStreamByteInput(is));
+            return unmarshaller.readObject();
+        } finally {
+            unmarshaller.finish();
+        }
+    }
+
+    static void serializeObject(final Marshaller marshaller, final OutputStream os, final Object o) throws IOException {
+        try (os) {
+            marshaller.start(new NoFlushByteOutput(Marshalling.createByteOutput(os)));
+            marshaller.writeObject(o);
+            marshaller.flush();
+        } finally {
+            marshaller.finish();
+        }
+    }
+
+}
