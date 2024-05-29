@@ -84,15 +84,10 @@ public class HttpRemoteTransactionService {
 
     public HttpHandler createHandler() {
         RoutingHandler routingHandler = new RoutingHandler();
-        registerHandler(routingHandler, UT_BEGIN);
-        registerHandler(routingHandler, UT_COMMIT);
-        registerHandler(routingHandler, UT_ROLLBACK);
-        registerHandler(routingHandler, XA_BEFORE_COMPLETION);
-        registerHandler(routingHandler, XA_COMMIT);
-        registerHandler(routingHandler, XA_FORGET);
-        registerHandler(routingHandler, XA_PREPARE);
-        registerHandler(routingHandler, XA_RECOVER);
-        registerHandler(routingHandler, XA_ROLLBACK);
+        for (RequestType requestType : RequestType.values()) {
+            registerHandler(routingHandler, requestType);
+        }
+
         return httpServiceConfig.wrap(new BlockingHandler(new ElytronIdentityHandler(routingHandler)));
     }
 
