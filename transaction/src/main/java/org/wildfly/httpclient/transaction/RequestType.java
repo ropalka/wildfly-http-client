@@ -20,15 +20,6 @@ package org.wildfly.httpclient.transaction;
 
 import static io.undertow.util.Methods.GET;
 import static io.undertow.util.Methods.POST;
-import static org.wildfly.httpclient.transaction.TransactionConstants.UT_BEGIN_PATH;
-import static org.wildfly.httpclient.transaction.TransactionConstants.UT_COMMIT_PATH;
-import static org.wildfly.httpclient.transaction.TransactionConstants.UT_ROLLBACK_PATH;
-import static org.wildfly.httpclient.transaction.TransactionConstants.XA_BC_PATH;
-import static org.wildfly.httpclient.transaction.TransactionConstants.XA_COMMIT_PATH;
-import static org.wildfly.httpclient.transaction.TransactionConstants.XA_FORGET_PATH;
-import static org.wildfly.httpclient.transaction.TransactionConstants.XA_PREP_PATH;
-import static org.wildfly.httpclient.transaction.TransactionConstants.XA_RECOVER_PATH;
-import static org.wildfly.httpclient.transaction.TransactionConstants.XA_ROLLBACK_PATH;
 
 import io.undertow.util.HttpString;
 
@@ -37,15 +28,15 @@ import io.undertow.util.HttpString;
  */
 enum RequestType {
 
-    UT_BEGIN(POST, UT_BEGIN_PATH),
-    UT_COMMIT(POST, UT_COMMIT_PATH),
-    UT_ROLLBACK(POST, UT_ROLLBACK_PATH),
-    XA_BEFORE_COMPLETION(POST, XA_BC_PATH),
-    XA_COMMIT(POST, XA_COMMIT_PATH),
-    XA_FORGET(POST, XA_FORGET_PATH),
-    XA_PREPARE(POST, XA_PREP_PATH),
-    XA_RECOVER(GET, XA_RECOVER_PATH),
-    XA_ROLLBACK(POST, XA_ROLLBACK_PATH);
+    UT_BEGIN(POST, "/ut/begin"),
+    UT_COMMIT(POST, "/ut/commit"),
+    UT_ROLLBACK(POST, "/ut/rollback"),
+    XA_BEFORE_COMPLETION(POST, "/xa/bc"),
+    XA_COMMIT(POST, "/xa/commit"),
+    XA_FORGET(POST, "/xa/forget"),
+    XA_PREPARE(POST, "/xa/prep"),
+    XA_RECOVER(GET, "/xa/recover"),
+    XA_ROLLBACK(POST, "/xa/rollback");
 
     private final HttpString method;
     private final String path;
