@@ -79,11 +79,9 @@ public class EjbHttpService {
 
     public HttpHandler createHttpHandler() {
         PathHandler pathHandler = new PathHandler();
-
-        registerHandler(pathHandler, START_INVOCATION);
-        registerHandler(pathHandler, CANCEL_INVOCATION);
-        registerHandler(pathHandler, CREATE_SESSION);
-        registerHandler(pathHandler, DISCOVER);
+        for (RequestType requestType : RequestType.values()) {
+            registerHandler(pathHandler, requestType);
+        }
 
         EncodingHandler encodingHandler = new EncodingHandler(pathHandler, new ContentEncodingRepository().addEncodingHandler(Headers.GZIP.toString(), new GzipEncodingProvider(), 1));
         RequestEncodingHandler requestEncodingHandler = new RequestEncodingHandler(encodingHandler);
