@@ -18,9 +18,10 @@
 
 package org.wildfly.httpclient.transaction;
 
+import static org.wildfly.httpclient.transaction.Serializer.serializeXid;
+
 import io.undertow.client.ClientRequest;
 import org.jboss.marshalling.Marshaller;
-import org.jboss.marshalling.Marshalling;
 import org.wildfly.httpclient.common.HttpTargetContext;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
 import org.wildfly.transaction.client.spi.SimpleTransactionControl;
@@ -84,16 +85,7 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
 
             targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
                 Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-                marshaller.start(Marshalling.createByteOutput(output));
-                marshaller.writeInt(id.getFormatId());
-                final byte[] gtid = id.getGlobalTransactionId();
-                marshaller.writeInt(gtid.length);
-                marshaller.write(gtid);
-                final byte[] bq = id.getBranchQualifier();
-                marshaller.writeInt(bq.length);
-                marshaller.write(bq);
-                marshaller.finish();
-                output.close();
+                serializeXid(marshaller, output, id);
             }, (input, response, closable) -> {
                 try {
                     result.complete(null);
@@ -152,16 +144,7 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
 
             targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
                 Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-                marshaller.start(Marshalling.createByteOutput(output));
-                marshaller.writeInt(id.getFormatId());
-                final byte[] gtid = id.getGlobalTransactionId();
-                marshaller.writeInt(gtid.length);
-                marshaller.write(gtid);
-                final byte[] bq = id.getBranchQualifier();
-                marshaller.writeInt(bq.length);
-                marshaller.write(bq);
-                marshaller.finish();
-                output.close();
+                serializeXid(marshaller, output, id);
             }, (input, response, closeable) -> {
                 try {
                     result.complete(null);

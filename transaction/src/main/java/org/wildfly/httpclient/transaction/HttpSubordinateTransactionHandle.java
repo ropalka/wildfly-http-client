@@ -24,11 +24,11 @@ import static org.wildfly.httpclient.transaction.RequestType.XA_COMMIT;
 import static org.wildfly.httpclient.transaction.RequestType.XA_FORGET;
 import static org.wildfly.httpclient.transaction.RequestType.XA_PREPARE;
 import static org.wildfly.httpclient.transaction.RequestType.XA_ROLLBACK;
+import static org.wildfly.httpclient.transaction.Serializer.serializeXid;
 
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import org.jboss.marshalling.Marshaller;
-import org.jboss.marshalling.Marshalling;
 import org.wildfly.httpclient.common.HttpTargetContext;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
 import org.wildfly.transaction.client.spi.SubordinateTransactionControl;
@@ -110,16 +110,7 @@ class HttpSubordinateTransactionHandle implements SubordinateTransactionControl 
         final ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
         targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
             Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-            marshaller.start(Marshalling.createByteOutput(output));
-            marshaller.writeInt(id.getFormatId());
-            final byte[] gtid = id.getGlobalTransactionId();
-            marshaller.writeInt(gtid.length);
-            marshaller.write(gtid);
-            final byte[] bq = id.getBranchQualifier();
-            marshaller.writeInt(bq.length);
-            marshaller.write(bq);
-            marshaller.finish();
-            output.close();
+            serializeXid(marshaller, output, id);
         }, (input, response, closeable) -> {
             try {
                 result.complete(resultFunction != null ? resultFunction.apply(response) : null);
