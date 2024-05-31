@@ -18,6 +18,13 @@
 
 package org.wildfly.httpclient.ejb;
 
+import static org.wildfly.httpclient.ejb.Constants.INVOCATION;
+import static org.wildfly.httpclient.ejb.Constants.JSESSIONID_COOKIE_NAME;
+import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
+import static org.wildfly.httpclient.ejb.Serializer.serializeObject;
+import static org.wildfly.httpclient.ejb.ByteOutputs.unclosable;
+import static org.wildfly.httpclient.ejb.ByteOutputs.unflushable;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.Headers;
@@ -46,7 +53,6 @@ import org.wildfly.httpclient.common.ElytronIdentityHandler;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
 import org.wildfly.httpclient.common.HttpServerHelper;
 import org.wildfly.httpclient.common.HttpServiceConfig;
-import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.security.auth.server.SecurityIdentity;
 import org.wildfly.transaction.client.ImportResult;
 import org.wildfly.transaction.client.LocalTransaction;
@@ -68,9 +74,6 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
-
-import static org.wildfly.httpclient.ejb.Constants.INVOCATION;
-import static org.wildfly.httpclient.ejb.Constants.JSESSIONID_COOKIE_NAME;
 
 /**
  * Http handler for EJB invocations.
@@ -387,18 +390,11 @@ final class HttpInvocationHandler extends RemoteHTTPHandler {
 //                                        exchange.setResponseCookie(new CookieImpl("JSESSIONID", output.getSessionAffinity()).setPath(WILDFLY_SERVICES));
 //                                    }
                 OutputStream outputStream = exchange.getOutputStream();
-                final ByteOutput byteOutput = new NoFlushByteOutput(Marshalling.createByteOutput(outputStream));
-                // start the marshaller
+                final ByteOutput byteOutput = unclosable(unflushable(Marshalling.createByteOutput(outputStream)));
                 marshaller.start(byteOutput);
-                marshaller.writeObject(result);
-                // TODO: Do we really need to send this back?
-                PackedInteger.writePackedInteger(marshaller, contextData.size());
-                for(Map.Entry<String, Object> entry : contextData.entrySet()) {
-                    marshaller.writeObject(entry.getKey());
-                    marshaller.writeObject(entry.getValue());
-                }
+                serializeObject(marshaller, byteOutput, result);
+                serializeMap(marshaller, byteOutput, contextData);
                 marshaller.finish();
-                marshaller.flush();
                 exchange.endExchange();
             } catch (Exception e) {
                 HttpServerHelper.sendException(exchange, httpServiceConfig, 500, e);

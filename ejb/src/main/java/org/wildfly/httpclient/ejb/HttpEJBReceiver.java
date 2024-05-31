@@ -18,6 +18,14 @@
 
 package org.wildfly.httpclient.ejb;
 
+import static java.security.AccessController.doPrivileged;
+import static org.wildfly.httpclient.ejb.ByteInputs.unclosable;
+import static org.wildfly.httpclient.ejb.Constants.HTTPS_PORT;
+import static org.wildfly.httpclient.ejb.Constants.HTTPS_SCHEME;
+import static org.wildfly.httpclient.ejb.Constants.HTTP_PORT;
+import static org.wildfly.httpclient.ejb.Serializer.deserializeObject;
+import static org.wildfly.httpclient.ejb.Serializer.deserializeMap;
+
 import io.undertow.client.ClientRequest;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
@@ -30,6 +38,7 @@ import org.jboss.ejb.client.EJBReceiverInvocationContext;
 import org.jboss.ejb.client.EJBReceiverSessionCreationContext;
 import org.jboss.ejb.client.SessionID;
 import org.jboss.ejb.client.StatefulEJBLocator;
+import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
@@ -76,11 +85,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPOutputStream;
-
-import static java.security.AccessController.doPrivileged;
-import static org.wildfly.httpclient.ejb.Constants.HTTPS_PORT;
-import static org.wildfly.httpclient.ejb.Constants.HTTPS_SCHEME;
-import static org.wildfly.httpclient.ejb.Constants.HTTP_PORT;
 
 /**
  * EJB receiver for invocations over HTTP.
@@ -210,15 +214,10 @@ class HttpEJBReceiver extends EJBReceiver {
                                 try {
 
                                     final Unmarshaller unmarshaller = createUnmarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
-
-                                    unmarshaller.start(new InputStreamByteInput(input));
-                                    returned = unmarshaller.readObject();
-                                    // read the attachments
-                                    final Map<String, Object> attachments = readAttachments(unmarshaller);
-                                    // finish unmarshalling
-                                    if (unmarshaller.read() != -1) {
-                                        exception = EjbHttpClientMessages.MESSAGES.unexpectedDataInResponse();
-                                    }
+                                    final ByteInput in = new InputStreamByteInput(input);
+                                    unmarshaller.start(in);
+                                    returned = deserializeObject(unmarshaller, unclosable(in));
+                                    final Map<String, Object> attachments = deserializeMap(unmarshaller, in);
                                     unmarshaller.finish();
 
                                     // WEJBHTTP-83 - remove jboss.returned.keys values from the local context data, so that after unmarshalling the response, we have the correct ContextData
