@@ -21,6 +21,7 @@ package org.wildfly.httpclient.ejb;
 import static org.wildfly.httpclient.ejb.Constants.INVOCATION;
 import static org.wildfly.httpclient.ejb.Constants.JSESSIONID_COOKIE_NAME;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeMap;
+import static org.wildfly.httpclient.ejb.Serializer.deserializeObject;
 import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
 import static org.wildfly.httpclient.ejb.Serializer.serializeObject;
 
@@ -180,7 +181,7 @@ final class HttpInvocationHandler extends RemoteHTTPHandler {
                             }
                         }
                         for (int i = 0; i < parameterTypeNames.length; ++i) {
-                            methodParams[i] = unmarshaller.readObject();
+                            methodParams[i] = deserializeObject(unmarshaller);
                         }
                         final Map<String, Object> contextData = deserializeMap(unmarshaller);
                         contextData.put(EJBClient.SOURCE_ADDRESS_KEY, exchange.getConnection().getPeerAddress());

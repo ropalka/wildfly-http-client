@@ -400,11 +400,10 @@ class HttpEJBReceiver extends EJBReceiver {
     }
 
 
-    private XAOutflowHandle writeTransaction(final Transaction transaction, final ObjectOutput dataOutput, URI uri) throws IOException, RollbackException, SystemException {
+    private void writeTransaction(final Transaction transaction, final ObjectOutput dataOutput, URI uri) throws IOException, RollbackException, SystemException {
 
         if (transaction == null) {
             dataOutput.writeByte(0);
-            return null;
         } else if (transaction instanceof RemoteTransaction) {
             final RemoteTransaction remoteTransaction = (RemoteTransaction) transaction;
             remoteTransaction.setLocation(uri);
@@ -413,7 +412,6 @@ class HttpEJBReceiver extends EJBReceiver {
             Xid xid = ir.getXid();
             dataOutput.writeByte(1);
             serializeXid(dataOutput, xid);
-            return null;
         } else if (transaction instanceof LocalTransaction) {
             final LocalTransaction localTransaction = (LocalTransaction) transaction;
             final XAOutflowHandle outflowHandle = transactionContext.outflowTransaction(uri, localTransaction);
@@ -421,7 +419,6 @@ class HttpEJBReceiver extends EJBReceiver {
             dataOutput.writeByte(2);
             serializeXid(dataOutput, xid);
             dataOutput.writeInt(outflowHandle.getRemainingTime());
-            return outflowHandle;
         } else {
             throw EjbHttpClientMessages.MESSAGES.cannotEnlistTx();
         }
