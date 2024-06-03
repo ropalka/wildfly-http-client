@@ -17,13 +17,9 @@
  */
 package org.wildfly.httpclient.naming;
 
-import org.jboss.marshalling.Marshaller;
-import org.jboss.marshalling.Marshalling;
-import org.wildfly.httpclient.common.NoFlushByteOutput;
-
 import java.io.IOException;
 import java.io.ObjectInput;
-import java.io.OutputStream;
+import java.io.ObjectOutput;
 
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
@@ -38,14 +34,8 @@ final class Serializer {
         return in.readObject();
     }
 
-    static void serializeObject(final Marshaller marshaller, final OutputStream os, final Object o) throws IOException {
-        try (os) {
-            marshaller.start(new NoFlushByteOutput(Marshalling.createByteOutput(os)));
-            marshaller.writeObject(o);
-            marshaller.flush();
-        } finally {
-            marshaller.finish();
-        }
+    static void serializeObject(final ObjectOutput out, final Object o) throws IOException {
+        out.writeObject(o);
     }
 
 }

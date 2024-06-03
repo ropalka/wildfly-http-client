@@ -43,15 +43,18 @@ import io.undertow.util.Headers;
 import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.StatusCodes;
 import org.jboss.marshalling.ByteInput;
+import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.ContextClassResolver;
 import org.jboss.marshalling.Marshaller;
+import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.ContentType;
 import org.wildfly.httpclient.common.ElytronIdentityHandler;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
 import org.wildfly.httpclient.common.HttpServerHelper;
 import org.wildfly.httpclient.common.HttpServiceConfig;
+import org.wildfly.httpclient.common.NoFlushByteOutput;
 
 import javax.naming.Binding;
 import javax.naming.Context;
@@ -262,7 +265,12 @@ public class HttpRemoteNamingService {
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, VALUE.toString());
         HttpNamingServerObjectResolver resolver = new HttpNamingServerObjectResolver(exchange);
         Marshaller marshaller = httpServiceConfig.getHttpMarshallerFactory(exchange).createMarshaller(resolver);
-        serializeObject(marshaller, exchange.getOutputStream(), result);
+        ByteOutput out = new NoFlushByteOutput(Marshalling.createByteOutput(exchange.getOutputStream()));
+        try (out) {
+            marshaller.start(out);
+            serializeObject(marshaller, result);
+            marshaller.finish();
+        }
     }
 
     @Deprecated

@@ -21,11 +21,14 @@ package org.wildfly.httpclient.naming;
 import io.undertow.client.ClientRequest;
 import io.undertow.util.StatusCodes;
 import org.jboss.marshalling.ByteInput;
+import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
+import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
 import org.wildfly.httpclient.common.HttpTargetContext;
+import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.httpclient.common.WildflyHttpContext;
 import org.wildfly.naming.client.AbstractContext;
 import org.wildfly.naming.client.CloseableNamingEnumeration;
@@ -371,7 +374,12 @@ public class HttpRootContext extends AbstractContext {
         targetContext.sendRequest(clientRequest, sslContext, authenticationConfiguration, output -> {
             if (object != null) {
                 Marshaller marshaller = createMarshaller(providerUri, targetContext.getHttpMarshallerFactory(clientRequest));
-                serializeObject(marshaller, output, object);
+                ByteOutput out = new NoFlushByteOutput(Marshalling.createByteOutput(output));
+                try (out) {
+                    marshaller.start(out);
+                    serializeObject(marshaller, object);
+                    marshaller.finish();
+                }
             }
         }, (input, response, closeable) -> {
             try {
