@@ -18,16 +18,14 @@
 package org.wildfly.httpclient.transaction;
 
 import org.jboss.marshalling.ByteOutput;
-import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.Marshaller;
-import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.transaction.client.SimpleXid;
 
 import javax.transaction.xa.Xid;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.ObjectInput;
 import java.io.OutputStream;
 
 /**
@@ -39,20 +37,15 @@ final class Serializer {
         // forbidden instantiation
     }
 
-    static Xid deserializeXid(final Unmarshaller unmarshaller, final InputStream is) throws IOException {
-        try (is) {
-            unmarshaller.start(new InputStreamByteInput(is));
-            int formatId = unmarshaller.readInt();
-            int length = unmarshaller.readInt();
-            byte[] globalId = new byte[length];
-            unmarshaller.readFully(globalId);
-            length = unmarshaller.readInt();
-            byte[] branchId = new byte[length];
-            unmarshaller.readFully(branchId);
-            return new SimpleXid(formatId, globalId, branchId);
-        } finally {
-            unmarshaller.finish();
-        }
+    static Xid deserializeXid(final ObjectInput in) throws IOException {
+        int formatId = in.readInt();
+        int length = in.readInt();
+        byte[] globalId = new byte[length];
+        in.readFully(globalId);
+        length = in.readInt();
+        byte[] branchId = new byte[length];
+        in.readFully(branchId);
+        return new SimpleXid(formatId, globalId, branchId);
     }
 
     static void serializeXid(final Marshaller marshaller, final OutputStream os, final Xid xid) throws IOException {
@@ -69,25 +62,13 @@ final class Serializer {
         }
     }
 
-    static Xid[] deserializeXidArray(final Unmarshaller unmarshaller, final InputStream is) throws IOException {
-        try (is) {
-            unmarshaller.start(new InputStreamByteInput(is));
-            int length = unmarshaller.readInt();
-            Xid[] ret = new Xid[length];
-            for (int i = 0; i < length; ++i) {
-                int formatId = unmarshaller.readInt();
-                length = unmarshaller.readInt();
-                byte[] globalId = new byte[length];
-                unmarshaller.readFully(globalId);
-                length = unmarshaller.readInt();
-                byte[] branchId = new byte[length];
-                unmarshaller.readFully(branchId);
-                ret[i] = new SimpleXid(formatId, globalId, branchId);
-            }
-            return ret;
-        } finally {
-            unmarshaller.finish();
+    static Xid[] deserializeXidArray(final ObjectInput in) throws IOException {
+        int length = in.readInt();
+        Xid[] ret = new Xid[length];
+        for (int i = 0; i < length; ++i) {
+            ret[i] = deserializeXid(in);
         }
+        return ret;
     }
 
     static void serializeXidArray(final Marshaller marshaller, final OutputStream os, final Xid[] xids) throws IOException {

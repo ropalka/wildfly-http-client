@@ -24,6 +24,8 @@ import static org.wildfly.httpclient.transaction.Serializer.deserializeXid;
 import static org.wildfly.httpclient.transaction.Serializer.deserializeXidArray;
 
 import io.undertow.client.ClientRequest;
+import org.jboss.marshalling.ByteInput;
+import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
@@ -90,9 +92,11 @@ public class HttpRemoteTransactionPeer implements RemoteTransactionPeer {
         }
 
         targetContext.sendRequest(request,  sslContext, authenticationConfiguration,null, (result, response, closeable) -> {
-            try {
+            try (ByteInput in = new InputStreamByteInput(result)) {
                 Unmarshaller unmarshaller = targetContext.getHttpMarshallerFactory(request).createUnmarshaller();
-                Xid[] ret = deserializeXidArray(unmarshaller, result);
+                unmarshaller.start(in);
+                Xid[] ret = deserializeXidArray(unmarshaller);
+                unmarshaller.finish();
                 xidList.complete(ret);
             } catch (Exception e) {
                 xidList.completeExceptionally(e);
@@ -132,9 +136,11 @@ public class HttpRemoteTransactionPeer implements RemoteTransactionPeer {
         }
 
         targetContext.sendRequest(request, sslContext, authenticationConfiguration, null, (result, response, closeable) -> {
-            try {
+            try (ByteInput in = new InputStreamByteInput(result)) {
                 Unmarshaller unmarshaller = targetContext.getHttpMarshallerFactory(request).createUnmarshaller();
-                Xid simpleXid = deserializeXid(unmarshaller, result);
+                unmarshaller.start(in);
+                Xid simpleXid = deserializeXid(unmarshaller);
+                unmarshaller.finish();
                 beginXid.complete(simpleXid);
             } catch (Exception e) {
                 beginXid.completeExceptionally(e);

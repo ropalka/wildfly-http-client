@@ -44,6 +44,8 @@ import io.undertow.server.RoutingHandler;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import org.jboss.marshalling.ByteInput;
+import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.common.function.ExceptionBiFunction;
@@ -121,7 +123,12 @@ public class HttpRemoteTransactionService {
             try {
                 HttpMarshallerFactory httpMarshallerFactory = httpServiceConfig.getHttpUnmarshallerFactory(exchange);
                 Unmarshaller unmarshaller = httpMarshallerFactory.createUnmarshaller();
-                Xid simpleXid = deserializeXid(unmarshaller, exchange.getInputStream());
+                Xid simpleXid;
+                try (ByteInput in = new InputStreamByteInput(exchange.getInputStream())) {
+                    unmarshaller.start(in);
+                    simpleXid = deserializeXid(unmarshaller);
+                    unmarshaller.finish();
+                }
                 ImportResult<LocalTransaction> transaction = transactionContext.findOrImportTransaction(simpleXid, 0);
                 transaction.getTransaction().performFunction((ExceptionBiFunction<ImportResult<LocalTransaction>, HttpServerExchange, Void, Exception>) (o, exchange2) -> {
                     handleImpl(exchange2, o);
