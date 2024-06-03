@@ -33,6 +33,7 @@ import static org.wildfly.httpclient.transaction.RequestType.XA_FORGET;
 import static org.wildfly.httpclient.transaction.RequestType.XA_PREPARE;
 import static org.wildfly.httpclient.transaction.RequestType.XA_RECOVER;
 import static org.wildfly.httpclient.transaction.RequestType.XA_ROLLBACK;
+import static org.wildfly.httpclient.transaction.ByteOutputs.byteOutputOf;
 import static org.wildfly.httpclient.transaction.Serializer.serializeThrowable;
 import static org.wildfly.httpclient.transaction.Serializer.deserializeXid;
 import static org.wildfly.httpclient.transaction.Serializer.serializeXid;
@@ -45,6 +46,7 @@ import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.jboss.marshalling.ByteInput;
+import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
@@ -159,7 +161,7 @@ public class HttpRemoteTransactionService {
                 final Xid xid = xidResolver.apply(transaction);
                 final ByteArrayOutputStream out = new ByteArrayOutputStream();
                 Marshaller marshaller = httpServiceConfig.getHttpMarshallerFactory(exchange).createMarshaller();
-                serializeXid(marshaller, out, xid);
+                serializeXid(marshaller, xid);
                 exchange.getResponseSender().send(ByteBuffer.wrap(out.toByteArray()));
             } catch (Exception e) {
                 internalSendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, e);
@@ -188,9 +190,16 @@ public class HttpRemoteTransactionService {
 
                 final Xid[] recoveryList = transactionContext.getRecoveryInterface().recover(flags, parentName);
                 final ByteArrayOutputStream out = new ByteArrayOutputStream();
-                Marshaller marshaller = httpServiceConfig.getHttpMarshallerFactory(exchange).createMarshaller();
-                serializeXidArray(marshaller, out, recoveryList);
-                exchange.getResponseSender().send(ByteBuffer.wrap(out.toByteArray()));
+                ByteOutput byteOutput = byteOutputOf(out);
+                byte[] data;
+                try (byteOutput) {
+                    Marshaller marshaller = httpServiceConfig.getHttpMarshallerFactory(exchange).createMarshaller();
+                    marshaller.start(byteOutput);
+                    serializeXidArray(marshaller, recoveryList);
+                    marshaller.finish();
+                    data = out.toByteArray();
+                }
+                exchange.getResponseSender().send(ByteBuffer.wrap(data));
             } catch (Exception e) {
                 internalSendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, e);
             }

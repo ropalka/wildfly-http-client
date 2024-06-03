@@ -19,8 +19,10 @@
 package org.wildfly.httpclient.transaction;
 
 import static org.wildfly.httpclient.transaction.Serializer.serializeXid;
+import static org.wildfly.httpclient.transaction.ByteOutputs.byteOutputOf;
 
 import io.undertow.client.ClientRequest;
+import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
@@ -85,7 +87,11 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
 
             targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
                 Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-                serializeXid(marshaller, output, id);
+                try (ByteOutput out = byteOutputOf(output)) {
+                    marshaller.start(out);
+                    serializeXid(marshaller, id);
+                    marshaller.finish();
+                }
             }, (input, response, closable) -> {
                 try {
                     result.complete(null);
@@ -144,7 +150,11 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
 
             targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
                 Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-                serializeXid(marshaller, output, id);
+                try (ByteOutput out = byteOutputOf(output)) {
+                    marshaller.start(out);
+                    serializeXid(marshaller, id);
+                    marshaller.finish();
+                }
             }, (input, response, closeable) -> {
                 try {
                     result.complete(null);

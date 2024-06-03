@@ -26,6 +26,7 @@ import org.wildfly.transaction.client.SimpleXid;
 import javax.transaction.xa.Xid;
 import java.io.IOException;
 import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.io.OutputStream;
 
 /**
@@ -48,18 +49,12 @@ final class Serializer {
         return new SimpleXid(formatId, globalId, branchId);
     }
 
-    static void serializeXid(final Marshaller marshaller, final OutputStream os, final Xid xid) throws IOException {
-        try (os) {
-            marshaller.start(new NoFlushByteOutput(Marshalling.createByteOutput(os)));
-            marshaller.writeInt(xid.getFormatId());
-            marshaller.writeInt(xid.getGlobalTransactionId().length);
-            marshaller.write(xid.getGlobalTransactionId());
-            marshaller.writeInt(xid.getBranchQualifier().length);
-            marshaller.write(xid.getBranchQualifier());
-            marshaller.flush();
-        } finally {
-            marshaller.finish();
-        }
+    static void serializeXid(final ObjectOutput out, final Xid xid) throws IOException {
+        out.writeInt(xid.getFormatId());
+        out.writeInt(xid.getGlobalTransactionId().length);
+        out.write(xid.getGlobalTransactionId());
+        out.writeInt(xid.getBranchQualifier().length);
+        out.write(xid.getBranchQualifier());
     }
 
     static Xid[] deserializeXidArray(final ObjectInput in) throws IOException {
@@ -71,20 +66,10 @@ final class Serializer {
         return ret;
     }
 
-    static void serializeXidArray(final Marshaller marshaller, final OutputStream os, final Xid[] xids) throws IOException {
-        try (os) {
-            marshaller.start(new NoFlushByteOutput(Marshalling.createByteOutput(os)));
-            marshaller.writeInt(xids.length);
-            for (Xid xid : xids) {
-                marshaller.writeInt(xid.getFormatId());
-                marshaller.writeInt(xid.getGlobalTransactionId().length);
-                marshaller.write(xid.getGlobalTransactionId());
-                marshaller.writeInt(xid.getBranchQualifier().length);
-                marshaller.write(xid.getBranchQualifier());
-            }
-            marshaller.flush();
-        } finally {
-            marshaller.finish();
+    static void serializeXidArray(final ObjectOutput out, final Xid[] xids) throws IOException {
+        out.writeInt(xids.length);
+        for (Xid xid : xids) {
+            serializeXid(out, xid);
         }
     }
 
