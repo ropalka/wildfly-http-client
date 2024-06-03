@@ -24,6 +24,7 @@ import static org.wildfly.httpclient.ejb.Constants.HTTPS_SCHEME;
 import static org.wildfly.httpclient.ejb.Constants.HTTP_PORT;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeObject;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeMap;
+import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
 
 import io.undertow.client.ClientRequest;
 import io.undertow.util.AttachmentKey;
@@ -382,33 +383,21 @@ class HttpEJBReceiver extends EJBReceiver {
     }
 
     private void marshalEJBRequest(ByteOutput byteOutput, EJBClientInvocationContext clientInvocationContext, HttpTargetContext targetContext, ClientRequest clientRequest) throws IOException, RollbackException, SystemException {
-        Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(clientRequest));
-        marshaller.start(byteOutput);
-        writeTransaction(clientInvocationContext.getTransaction(), marshaller, targetContext.getUri());
+        try (byteOutput) {
+            Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(clientRequest));
+            marshaller.start(byteOutput);
+            writeTransaction(clientInvocationContext.getTransaction(), marshaller, targetContext.getUri());
 
-
-        Object[] methodParams = clientInvocationContext.getParameters();
-        if (methodParams != null && methodParams.length > 0) {
-            for (final Object methodParam : methodParams) {
-                marshaller.writeObject(methodParam);
+            Object[] methodParams = clientInvocationContext.getParameters();
+            if (methodParams != null && methodParams.length > 0) {
+                for (final Object methodParam : methodParams) {
+                    marshaller.writeObject(methodParam);
+                }
             }
+            final Map<String, Object> contextData = clientInvocationContext.getContextData();
+            serializeMap(marshaller, contextData);
+            marshaller.finish();
         }
-        // write out the context data
-        final Map<String, Object> contextData = clientInvocationContext.getContextData();
-        // no private or public data to write out
-        if (contextData == null) {
-            marshaller.writeByte(0);
-        } else {
-            final int totalAttachments = contextData.size();
-            PackedInteger.writePackedInteger(marshaller, totalAttachments);
-            // write out public (application specific) context data
-            for (Map.Entry<String, Object> invocationContextData : contextData.entrySet()) {
-                marshaller.writeObject(invocationContextData.getKey());
-                marshaller.writeObject(invocationContextData.getValue());
-            }
-        }
-        // finish marshalling
-        marshaller.finish();
     }
 
 

@@ -77,8 +77,9 @@ final class Serializer {
     }
 
     static void serializeMap(final Marshaller marshaller, final Map<String, Object> contextData) throws IOException {
-        PackedInteger.writePackedInteger(marshaller, contextData.size());
-        for (Map.Entry<String, Object> entry : contextData.entrySet()) {
+        int size = contextData != null ? contextData.size() : 0;
+        PackedInteger.writePackedInteger(marshaller, size);
+        if (size > 0) for (Map.Entry<String, Object> entry : contextData.entrySet()) {
             marshaller.writeObject(entry.getKey());
             marshaller.writeObject(entry.getValue());
         }
