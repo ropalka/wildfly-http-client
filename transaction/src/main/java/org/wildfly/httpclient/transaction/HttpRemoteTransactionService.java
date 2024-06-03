@@ -274,8 +274,14 @@ public class HttpRemoteTransactionService {
 
             final Marshaller marshaller = httpServiceConfig.getHttpMarshallerFactory(exchange).createMarshaller();
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            serializeThrowable(marshaller, outputStream, e);
-            exchange.getResponseSender().send(ByteBuffer.wrap(outputStream.toByteArray()));
+            byte[] data;
+            try (ByteOutput out = byteOutputOf(outputStream)) {
+                marshaller.start(out);
+                serializeThrowable(marshaller, e);
+                marshaller.finish();
+                data = outputStream.toByteArray();
+            }
+            exchange.getResponseSender().send(ByteBuffer.wrap(data));
         } catch (IOException e1) {
             HttpRemoteTransactionMessages.MESSAGES.debugf(e, "Failed to write exception");
         }
@@ -289,8 +295,14 @@ public class HttpRemoteTransactionService {
 
             final Marshaller marshaller = HttpServiceConfig.getInstance().getHttpMarshallerFactory(exchange).createMarshaller();
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            serializeThrowable(marshaller, outputStream, e);
-            exchange.getResponseSender().send(ByteBuffer.wrap(outputStream.toByteArray()));
+            byte[] data;
+            try (ByteOutput out = byteOutputOf(outputStream)) {
+                marshaller.start(out);
+                serializeThrowable(marshaller, e);
+                marshaller.finish();
+                data = outputStream.toByteArray();
+            }
+            exchange.getResponseSender().send(ByteBuffer.wrap(data));
         } catch (IOException e1) {
             HttpRemoteTransactionMessages.MESSAGES.debugf(e, "Failed to write exception");
         }

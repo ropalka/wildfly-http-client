@@ -17,17 +17,12 @@
  */
 package org.wildfly.httpclient.transaction;
 
-import org.jboss.marshalling.ByteOutput;
-import org.jboss.marshalling.Marshalling;
-import org.jboss.marshalling.Marshaller;
-import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.transaction.client.SimpleXid;
 
 import javax.transaction.xa.Xid;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.io.OutputStream;
 
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
@@ -73,16 +68,9 @@ final class Serializer {
         }
     }
 
-    static void serializeThrowable(final Marshaller marshaller, final OutputStream os, final Throwable t) throws IOException {
-        try (os) {
-            final ByteOutput byteOutput = new NoFlushByteOutput(Marshalling.createByteOutput(os));
-            marshaller.start(byteOutput);
-            marshaller.writeObject(t);
-            marshaller.write(0);
-            marshaller.flush();
-        } finally {
-            marshaller.finish();
-        }
+    static void serializeThrowable(final ObjectOutput out, final Throwable t) throws IOException {
+        out.writeObject(t);
+        out.write(0);
     }
 
 }
