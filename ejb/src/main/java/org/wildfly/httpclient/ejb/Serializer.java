@@ -18,8 +18,6 @@
 package org.wildfly.httpclient.ejb;
 
 import org.jboss.ejb.client.EJBModuleIdentifier;
-import org.jboss.marshalling.Marshaller;
-import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.transaction.client.SimpleXid;
 
 import javax.transaction.xa.Xid;
@@ -40,52 +38,52 @@ final class Serializer {
         // forbidden instantiation
     }
 
-    static Set<EJBModuleIdentifier> deserializeSet(final Unmarshaller unmarshaller) throws IOException, ClassNotFoundException {
-        int size = unmarshaller.readInt();
+    static Set<EJBModuleIdentifier> deserializeSet(final ObjectInput in) throws IOException, ClassNotFoundException {
+        int size = in.readInt();
         Set<EJBModuleIdentifier> ret = new HashSet<>(size);
         for (int i = 0; i < size; i++) {
-            ret.add((EJBModuleIdentifier) unmarshaller.readObject());
+            ret.add((EJBModuleIdentifier) in.readObject());
         }
         return ret;
     }
 
-    static void serializeSet(final Marshaller marshaller, final Set<EJBModuleIdentifier> modules) throws IOException {
-        marshaller.writeInt(modules.size());
+    static void serializeSet(final ObjectOutput out, final Set<EJBModuleIdentifier> modules) throws IOException {
+        out.writeInt(modules.size());
         for (EJBModuleIdentifier ejbModuleIdentifier : modules) {
-            marshaller.writeObject(ejbModuleIdentifier);
+            out.writeObject(ejbModuleIdentifier);
         }
     }
 
-    static Object deserializeObject(final Unmarshaller unmarshaller) throws IOException, ClassNotFoundException {
-        return unmarshaller.readObject();
+    static Object deserializeObject(final ObjectInput in) throws IOException, ClassNotFoundException {
+        return in.readObject();
     }
 
-    static void serializeObject(final Marshaller marshaller, final Object o) throws IOException {
-        marshaller.writeObject(o);
+    static void serializeObject(final ObjectOutput out, final Object o) throws IOException {
+        out.writeObject(o);
     }
 
-    static Map<String, Object> deserializeMap(final Unmarshaller unmarshaller) throws IOException, ClassNotFoundException {
-        final int contextDataSize = PackedInteger.readPackedInteger(unmarshaller);
+    static Map<String, Object> deserializeMap(final ObjectInput in) throws IOException, ClassNotFoundException {
+        final int contextDataSize = PackedInteger.readPackedInteger(in);
         if (contextDataSize == 0) {
             return null;
         }
         final Map<String, Object> ret = new HashMap<>(contextDataSize);
         for (int i = 0; i < contextDataSize; i++) {
             // read the key
-            final String key = (String) unmarshaller.readObject();
+            final String key = (String) in.readObject();
             // read the attachment value
-            final Object val = unmarshaller.readObject();
+            final Object val = in.readObject();
             ret.put(key, val);
         }
         return ret;
     }
 
-    static void serializeMap(final Marshaller marshaller, final Map<String, Object> contextData) throws IOException {
+    static void serializeMap(final ObjectOutput out, final Map<String, Object> contextData) throws IOException {
         int size = contextData != null ? contextData.size() : 0;
-        PackedInteger.writePackedInteger(marshaller, size);
+        PackedInteger.writePackedInteger(out, size);
         if (size > 0) for (Map.Entry<String, Object> entry : contextData.entrySet()) {
-            marshaller.writeObject(entry.getKey());
-            marshaller.writeObject(entry.getValue());
+            out.writeObject(entry.getKey());
+            out.writeObject(entry.getValue());
         }
     }
 
