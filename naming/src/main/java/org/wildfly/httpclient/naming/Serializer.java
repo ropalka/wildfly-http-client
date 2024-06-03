@@ -17,14 +17,12 @@
  */
 package org.wildfly.httpclient.naming;
 
-import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Marshalling;
-import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.NoFlushByteOutput;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.ObjectInput;
 import java.io.OutputStream;
 
 /**
@@ -36,13 +34,8 @@ final class Serializer {
         // forbidden instantiation
     }
 
-    static Object deserializeObject(final Unmarshaller unmarshaller, final InputStream is) throws IOException, ClassNotFoundException {
-        try (is) {
-            unmarshaller.start(new InputStreamByteInput(is));
-            return unmarshaller.readObject();
-        } finally {
-            unmarshaller.finish();
-        }
+    static Object deserializeObject(final ObjectInput in) throws IOException, ClassNotFoundException {
+        return in.readObject();
     }
 
     static void serializeObject(final Marshaller marshaller, final OutputStream os, final Object o) throws IOException {

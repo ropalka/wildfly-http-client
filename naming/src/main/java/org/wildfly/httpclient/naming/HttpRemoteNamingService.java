@@ -42,6 +42,8 @@ import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.util.Headers;
 import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.StatusCodes;
+import org.jboss.marshalling.ByteInput;
+import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.ContextClassResolver;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
@@ -57,7 +59,6 @@ import javax.naming.NameClassPair;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InvalidClassException;
 import java.net.URLDecoder;
 import java.util.Collections;
@@ -233,11 +234,13 @@ public class HttpRemoteNamingService {
                 return null;
             }
             final HttpMarshallerFactory marshallerFactory = httpServiceConfig.getHttpUnmarshallerFactory(exchange);
-            try (InputStream inputStream = exchange.getInputStream()) {
+            try (ByteInput in = new InputStreamByteInput(exchange.getInputStream())) {
                 Unmarshaller unmarshaller = classResolverFilter != null ?
                         marshallerFactory.createUnmarshaller(new FilterClassResolver(classResolverFilter)):
                         marshallerFactory.createUnmarshaller();
-                Object object = deserializeObject(unmarshaller, inputStream);
+                unmarshaller.start(in);
+                Object object = deserializeObject(unmarshaller);
+                unmarshaller.finish();
                 doOperation(name, object);
             } catch (Exception e) {
                 if (e instanceof NamingException) {

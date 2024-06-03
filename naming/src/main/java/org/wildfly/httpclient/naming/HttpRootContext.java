@@ -20,6 +20,8 @@ package org.wildfly.httpclient.naming;
 
 import io.undertow.client.ClientRequest;
 import io.undertow.util.StatusCodes;
+import org.jboss.marshalling.ByteInput;
+import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
@@ -299,7 +301,11 @@ public class HttpRootContext extends AbstractContext {
                     ClassLoader old = setContextClassLoader(tccl);
                     try {
                         final Unmarshaller unmarshaller = createUnmarshaller(providerUri, targetContext.getHttpMarshallerFactory(clientRequest));
-                        returned = deserializeObject(unmarshaller, input);
+                       try (ByteInput in = new InputStreamByteInput(input)) {
+                            unmarshaller.start(in);
+                            returned = deserializeObject(unmarshaller);
+                            unmarshaller.finish();
+                        }
 
                         if (response.getResponseCode() >= 400) {
                             exception = (Exception) returned;
