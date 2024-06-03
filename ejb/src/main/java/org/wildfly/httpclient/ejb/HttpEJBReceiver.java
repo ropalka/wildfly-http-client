@@ -25,6 +25,7 @@ import static org.wildfly.httpclient.ejb.Constants.HTTP_PORT;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeObject;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeMap;
 import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
+import static org.wildfly.httpclient.ejb.Serializer.serializeXid;
 
 import io.undertow.client.ClientRequest;
 import io.undertow.util.AttachmentKey;
@@ -66,7 +67,6 @@ import jakarta.transaction.Transaction;
 import javax.transaction.xa.Xid;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.ObjectInput;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.URI;
@@ -75,7 +75,6 @@ import java.security.GeneralSecurityException;
 import java.security.PrivilegedAction;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -413,64 +412,18 @@ class HttpEJBReceiver extends EJBReceiver {
             if (ir == null) throw EjbHttpClientMessages.MESSAGES.cannotEnlistTx();
             Xid xid = ir.getXid();
             dataOutput.writeByte(1);
-            dataOutput.writeInt(xid.getFormatId());
-            final byte[] gtid = xid.getGlobalTransactionId();
-            dataOutput.writeInt(gtid.length);
-            dataOutput.write(gtid);
-            final byte[] bq = xid.getBranchQualifier();
-            dataOutput.writeInt(bq.length);
-            dataOutput.write(bq);
+            serializeXid(dataOutput, xid);
             return null;
         } else if (transaction instanceof LocalTransaction) {
             final LocalTransaction localTransaction = (LocalTransaction) transaction;
             final XAOutflowHandle outflowHandle = transactionContext.outflowTransaction(uri, localTransaction);
             final Xid xid = outflowHandle.getXid();
             dataOutput.writeByte(2);
-            dataOutput.writeInt(xid.getFormatId());
-            final byte[] gtid = xid.getGlobalTransactionId();
-            dataOutput.writeInt(gtid.length);
-            dataOutput.write(gtid);
-            final byte[] bq = xid.getBranchQualifier();
-            dataOutput.writeInt(bq.length);
-            dataOutput.write(bq);
+            serializeXid(dataOutput, xid);
             dataOutput.writeInt(outflowHandle.getRemainingTime());
             return outflowHandle;
         } else {
             throw EjbHttpClientMessages.MESSAGES.cannotEnlistTx();
-        }
-    }
-
-    private static Map<String, Object> readAttachments(final ObjectInput input) throws IOException, ClassNotFoundException {
-        final int numAttachments = PackedInteger.readPackedInteger(input);
-        if (numAttachments == 0) {
-            return null;
-        }
-        final Map<String, Object> attachments = new HashMap<>(numAttachments);
-        for (int i = 0; i < numAttachments; i++) {
-            // read the key
-            final String key = (String) input.readObject();
-            // read the attachment value
-            final Object val = input.readObject();
-            attachments.put(key, val);
-        }
-        return attachments;
-    }
-
-    private static class StaticResultProducer implements EJBReceiverInvocationContext.ResultProducer {
-        private final Object ret;
-
-        public StaticResultProducer(Object ret) {
-            this.ret = ret;
-        }
-
-        @Override
-        public Object getResult() throws Exception {
-            return ret;
-        }
-
-        @Override
-        public void discardResult() {
-
         }
     }
 

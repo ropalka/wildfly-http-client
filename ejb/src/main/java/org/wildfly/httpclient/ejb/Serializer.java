@@ -21,7 +21,9 @@ import org.jboss.ejb.client.EJBModuleIdentifier;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
 
+import javax.transaction.xa.Xid;
 import java.io.IOException;
+import java.io.DataOutput;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -83,6 +85,14 @@ final class Serializer {
             marshaller.writeObject(entry.getKey());
             marshaller.writeObject(entry.getValue());
         }
+    }
+
+    static void serializeXid(final DataOutput out, final Xid xid) throws IOException {
+        out.writeInt(xid.getFormatId());
+        out.writeInt(xid.getGlobalTransactionId().length);
+        out.write(xid.getGlobalTransactionId());
+        out.writeInt(xid.getBranchQualifier().length);
+        out.write(xid.getBranchQualifier());
     }
 
 }
