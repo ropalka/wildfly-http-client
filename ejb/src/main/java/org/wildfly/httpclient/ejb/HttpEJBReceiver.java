@@ -65,7 +65,7 @@ import jakarta.transaction.RollbackException;
 import jakarta.transaction.SystemException;
 import jakarta.transaction.Transaction;
 import javax.transaction.xa.Xid;
-import java.io.DataOutput;
+import java.io.ObjectOutput;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
@@ -400,7 +400,7 @@ class HttpEJBReceiver extends EJBReceiver {
     }
 
 
-    private XAOutflowHandle writeTransaction(final Transaction transaction, final DataOutput dataOutput, URI uri) throws IOException, RollbackException, SystemException {
+    private XAOutflowHandle writeTransaction(final Transaction transaction, final ObjectOutput dataOutput, URI uri) throws IOException, RollbackException, SystemException {
 
         if (transaction == null) {
             dataOutput.writeByte(0);
