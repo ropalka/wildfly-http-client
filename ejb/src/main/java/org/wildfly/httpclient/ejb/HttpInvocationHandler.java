@@ -20,6 +20,7 @@ package org.wildfly.httpclient.ejb;
 
 import static org.wildfly.httpclient.ejb.Constants.INVOCATION;
 import static org.wildfly.httpclient.ejb.Constants.JSESSIONID_COOKIE_NAME;
+import static org.wildfly.httpclient.ejb.Serializer.deserializeMap;
 import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
 import static org.wildfly.httpclient.ejb.Serializer.serializeObject;
 
@@ -67,7 +68,6 @@ import java.io.InvalidClassException;
 import java.io.OutputStream;
 import java.net.SocketAddress;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -182,19 +182,7 @@ final class HttpInvocationHandler extends RemoteHTTPHandler {
                         for (int i = 0; i < parameterTypeNames.length; ++i) {
                             methodParams[i] = unmarshaller.readObject();
                         }
-                        final Map<String, Object> contextData;
-                        final int attachmentCount = PackedInteger.readPackedInteger(unmarshaller);
-                        if (attachmentCount > 0) {
-                            contextData = new HashMap<>();
-                            for (int i = 0; i < attachmentCount; ++i) {
-                                Object o = unmarshaller.readObject();
-                                String key = (String) o;
-                                Object value = unmarshaller.readObject();
-                                contextData.put(key, value);
-                            }
-                        } else {
-                            contextData = new HashMap<>();
-                        }
+                        final Map<String, Object> contextData = deserializeMap(unmarshaller);
                         contextData.put(EJBClient.SOURCE_ADDRESS_KEY, exchange.getConnection().getPeerAddress());
 
                         unmarshaller.finish();

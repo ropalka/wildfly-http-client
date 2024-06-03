@@ -65,7 +65,7 @@ final class Serializer {
     static Map<String, Object> deserializeMap(final ObjectInput in) throws IOException, ClassNotFoundException {
         final int contextDataSize = PackedInteger.readPackedInteger(in);
         if (contextDataSize == 0) {
-            return null;
+            return new HashMap<>();
         }
         final Map<String, Object> ret = new HashMap<>(contextDataSize);
         for (int i = 0; i < contextDataSize; i++) {
