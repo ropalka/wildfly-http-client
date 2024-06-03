@@ -18,8 +18,6 @@
 package org.wildfly.httpclient.ejb;
 
 import org.jboss.ejb.client.EJBModuleIdentifier;
-import org.jboss.marshalling.ByteInput;
-import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
 
@@ -38,69 +36,51 @@ final class Serializer {
         // forbidden instantiation
     }
 
-    static Set<EJBModuleIdentifier> deserializeSet(final Unmarshaller unmarshaller, final ByteInput in) throws IOException, ClassNotFoundException {
-        try (in) {
-            int size = unmarshaller.readInt();
-            Set<EJBModuleIdentifier> ret = new HashSet<>(size);
-            for (int i = 0; i < size; i++) {
-                ret.add((EJBModuleIdentifier) unmarshaller.readObject());
-            }
-            return ret;
+    static Set<EJBModuleIdentifier> deserializeSet(final Unmarshaller unmarshaller) throws IOException, ClassNotFoundException {
+        int size = unmarshaller.readInt();
+        Set<EJBModuleIdentifier> ret = new HashSet<>(size);
+        for (int i = 0; i < size; i++) {
+            ret.add((EJBModuleIdentifier) unmarshaller.readObject());
+        }
+        return ret;
+    }
+
+    static void serializeSet(final Marshaller marshaller, final Set<EJBModuleIdentifier> modules) throws IOException {
+        marshaller.writeInt(modules.size());
+        for (EJBModuleIdentifier ejbModuleIdentifier : modules) {
+            marshaller.writeObject(ejbModuleIdentifier);
         }
     }
 
-    static void serializeSet(final Marshaller marshaller, final ByteOutput out, final Set<EJBModuleIdentifier> modules) throws IOException {
-        try (out) {
-            marshaller.writeInt(modules.size());
-            for (EJBModuleIdentifier ejbModuleIdentifier : modules) {
-                marshaller.writeObject(ejbModuleIdentifier);
-            }
-        } finally {
-            marshaller.flush();
-        }
+    static Object deserializeObject(final Unmarshaller unmarshaller) throws IOException, ClassNotFoundException {
+        return unmarshaller.readObject();
     }
 
-    static Object deserializeObject(final Unmarshaller unmarshaller, final ByteInput in) throws IOException, ClassNotFoundException {
-        try (in) {
-            return unmarshaller.readObject();
-        }
+    static void serializeObject(final Marshaller marshaller, final Object o) throws IOException {
+        marshaller.writeObject(o);
     }
 
-    static void serializeObject(final Marshaller marshaller, final ByteOutput out, final Object o) throws IOException {
-        try (out) {
-            marshaller.writeObject(o);
-        } finally {
-            marshaller.flush();
+    static Map<String, Object> deserializeMap(final Unmarshaller unmarshaller) throws IOException, ClassNotFoundException {
+        final int contextDataSize = PackedInteger.readPackedInteger(unmarshaller);
+        if (contextDataSize == 0) {
+            return null;
         }
+        final Map<String, Object> ret = new HashMap<>(contextDataSize);
+        for (int i = 0; i < contextDataSize; i++) {
+            // read the key
+            final String key = (String) unmarshaller.readObject();
+            // read the attachment value
+            final Object val = unmarshaller.readObject();
+            ret.put(key, val);
+        }
+        return ret;
     }
 
-    static Map<String, Object> deserializeMap(final Unmarshaller unmarshaller, final ByteInput in) throws IOException, ClassNotFoundException {
-        try (in) {
-            final int contextDataSize = PackedInteger.readPackedInteger(unmarshaller);
-            if (contextDataSize == 0) {
-                return null;
-            }
-            final Map<String, Object> ret = new HashMap<>(contextDataSize);
-            for (int i = 0; i < contextDataSize; i++) {
-                // read the key
-                final String key = (String) unmarshaller.readObject();
-                // read the attachment value
-                final Object val = unmarshaller.readObject();
-                ret.put(key, val);
-            }
-            return ret;
-        }
-    }
-
-    static void serializeMap(final Marshaller marshaller, final ByteOutput out, final Map<String, Object> contextData) throws IOException {
-        try (out) {
-            PackedInteger.writePackedInteger(marshaller, contextData.size());
-            for (Map.Entry<String, Object> entry : contextData.entrySet()) {
-                marshaller.writeObject(entry.getKey());
-                marshaller.writeObject(entry.getValue());
-            }
-        } finally {
-            marshaller.flush();
+    static void serializeMap(final Marshaller marshaller, final Map<String, Object> contextData) throws IOException {
+        PackedInteger.writePackedInteger(marshaller, contextData.size());
+        for (Map.Entry<String, Object> entry : contextData.entrySet()) {
+            marshaller.writeObject(entry.getKey());
+            marshaller.writeObject(entry.getValue());
         }
     }
 

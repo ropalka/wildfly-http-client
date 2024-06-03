@@ -22,8 +22,6 @@ import static org.wildfly.httpclient.ejb.Constants.INVOCATION;
 import static org.wildfly.httpclient.ejb.Constants.JSESSIONID_COOKIE_NAME;
 import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
 import static org.wildfly.httpclient.ejb.Serializer.serializeObject;
-import static org.wildfly.httpclient.ejb.ByteOutputs.unclosable;
-import static org.wildfly.httpclient.ejb.ByteOutputs.unflushable;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
@@ -390,11 +388,13 @@ final class HttpInvocationHandler extends RemoteHTTPHandler {
 //                                        exchange.setResponseCookie(new CookieImpl("JSESSIONID", output.getSessionAffinity()).setPath(WILDFLY_SERVICES));
 //                                    }
                 OutputStream outputStream = exchange.getOutputStream();
-                final ByteOutput byteOutput = unclosable(unflushable(Marshalling.createByteOutput(outputStream)));
-                marshaller.start(byteOutput);
-                serializeObject(marshaller, byteOutput, result);
-                serializeMap(marshaller, byteOutput, contextData);
-                marshaller.finish();
+                final ByteOutput byteOutput = Marshalling.createByteOutput(outputStream);
+                try (byteOutput) {
+                    marshaller.start(byteOutput);
+                    serializeObject(marshaller, result);
+                    serializeMap(marshaller, contextData);
+                    marshaller.finish();
+                }
                 exchange.endExchange();
             } catch (Exception e) {
                 HttpServerHelper.sendException(exchange, httpServiceConfig, 500, e);

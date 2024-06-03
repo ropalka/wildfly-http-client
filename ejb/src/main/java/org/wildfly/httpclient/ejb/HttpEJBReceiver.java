@@ -19,7 +19,6 @@
 package org.wildfly.httpclient.ejb;
 
 import static java.security.AccessController.doPrivileged;
-import static org.wildfly.httpclient.ejb.ByteInputs.unclosable;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_PORT;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_SCHEME;
 import static org.wildfly.httpclient.ejb.Constants.HTTP_PORT;
@@ -212,13 +211,15 @@ class HttpEJBReceiver extends EJBReceiver {
                                 Exception exception = null;
                                 Object returned = null;
                                 try {
-
+                                    final Map<String, Object> attachments;
                                     final Unmarshaller unmarshaller = createUnmarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
                                     final ByteInput in = new InputStreamByteInput(input);
-                                    unmarshaller.start(in);
-                                    returned = deserializeObject(unmarshaller, unclosable(in));
-                                    final Map<String, Object> attachments = deserializeMap(unmarshaller, in);
-                                    unmarshaller.finish();
+                                    try (in) {
+                                        unmarshaller.start(in);
+                                        returned = deserializeObject(unmarshaller);
+                                        attachments = deserializeMap(unmarshaller);
+                                        unmarshaller.finish();
+                                    }
 
                                     // WEJBHTTP-83 - remove jboss.returned.keys values from the local context data, so that after unmarshalling the response, we have the correct ContextData
                                     Set<String> returnedContextDataKeys = (Set<String>) clientInvocationContext.getContextData().get(EJBClientInvocationContext.RETURNED_CONTEXT_DATA_KEY);

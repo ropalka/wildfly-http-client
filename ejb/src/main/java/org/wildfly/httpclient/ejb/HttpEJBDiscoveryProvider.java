@@ -161,13 +161,16 @@ public final class HttpEJBDiscoveryProvider implements DiscoveryProvider {
                     try {
                         final Unmarshaller unmarshaller = targetContext.getHttpMarshallerFactory(request).createUnmarshaller();
                         final ByteInput in = new InputStreamByteInput(result);
-                        unmarshaller.start(in);
-                        Set<EJBModuleIdentifier> modules = deserializeSet(unmarshaller, in);
+                        Set<EJBModuleIdentifier> modules;
+                        try (in) {
+                            unmarshaller.start(in);
+                            modules = deserializeSet(unmarshaller);
+                            unmarshaller.finish();
+                        }
                         for (EJBModuleIdentifier ejbModuleIdentifier : modules) {
                             ServiceURL url = createServiceURL(newUri, ejbModuleIdentifier);
                             serviceURLCache.add(url);
                         }
-                        unmarshaller.finish();
                     } catch (Exception e) {
                         EjbHttpClientMessages.MESSAGES.unableToPerformEjbDiscovery(e);
                     } finally {
