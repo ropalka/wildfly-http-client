@@ -20,9 +20,11 @@ package org.wildfly.httpclient.ejb;
 import org.jboss.ejb.client.EJBModuleIdentifier;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
+import org.wildfly.transaction.client.SimpleXid;
 
 import javax.transaction.xa.Xid;
 import java.io.IOException;
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -85,6 +87,17 @@ final class Serializer {
             marshaller.writeObject(entry.getKey());
             marshaller.writeObject(entry.getValue());
         }
+    }
+
+    static Xid deserializeXid(final DataInput in) throws IOException {
+        int formatId = in.readInt();
+        int length = in.readInt();
+        byte[] globalId = new byte[length];
+        in.readFully(globalId);
+        length = in.readInt();
+        byte[] branchId = new byte[length];
+        in.readFully(branchId);
+        return new SimpleXid(formatId, globalId, branchId);
     }
 
     static void serializeXid(final DataOutput out, final Xid xid) throws IOException {

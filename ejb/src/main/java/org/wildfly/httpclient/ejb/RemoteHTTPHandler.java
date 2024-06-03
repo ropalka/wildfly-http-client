@@ -18,12 +18,13 @@
 
 package org.wildfly.httpclient.ejb;
 
+import static org.wildfly.httpclient.ejb.Serializer.deserializeXid;
+
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import javax.transaction.xa.Xid;
 
 import org.jboss.marshalling.Unmarshaller;
-import org.wildfly.transaction.client.SimpleXid;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
@@ -69,14 +70,7 @@ abstract class RemoteHTTPHandler implements HttpHandler {
         if (type == 0) {
             return null;
         } else if (type == 1 || type == 2) {
-            int formatId = unmarshaller.readInt();
-            int len = unmarshaller.readInt();
-            byte[] globalId = new byte[len];
-            unmarshaller.readFully(globalId);
-            len = unmarshaller.readInt();
-            byte[] branchId = new byte[len];
-            unmarshaller.readFully(branchId);
-            SimpleXid simpleXid = new SimpleXid(formatId, globalId, branchId);
+            Xid simpleXid = deserializeXid(unmarshaller);
             if (type == 2) {
                 return new ReceivedTransaction(simpleXid, unmarshaller.readInt(), true);
             }
