@@ -20,6 +20,7 @@ package org.wildfly.httpclient.ejb;
 import org.jboss.marshalling.ByteOutput;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
@@ -34,6 +35,11 @@ interface ByteOutputs {
     static ByteOutput unflushable(final ByteOutput delegate) {
         if (delegate == null) throw new IllegalArgumentException();
         return new UnflushableByteOutput(delegate);
+    }
+
+    static ByteOutput byteOutputOf(final OutputStream delegate) {
+        if (delegate == null) throw new IllegalArgumentException();
+        return new ByteOutputStream(delegate);
     }
 
     final class UnclosableByteOutput implements ByteOutput {
@@ -72,10 +78,16 @@ interface ByteOutputs {
     }
 
     final class UnflushableByteOutput implements ByteOutput {
+
         private final ByteOutput delegate;
 
         UnflushableByteOutput(final ByteOutput delegate) {
             this.delegate = delegate;
+        }
+
+        @Override
+        public void close() throws IOException {
+            delegate.close();
         }
 
         @Override
@@ -84,8 +96,38 @@ interface ByteOutputs {
         }
 
         @Override
+        public void write(final int b) throws IOException {
+            delegate.write(b);
+        }
+
+        @Override
+        public void write(final byte[] b) throws IOException {
+            delegate.write(b);
+        }
+
+        @Override
+        public void write(final byte[] b, final int off, final int len) throws IOException {
+            delegate.write(b, off, len);
+        }
+
+    }
+
+    final class ByteOutputStream implements ByteOutput {
+
+        private final OutputStream delegate;
+
+        ByteOutputStream(final OutputStream delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
         public void close() throws IOException {
             delegate.close();
+        }
+
+        @Override
+        public void flush() throws IOException {
+            delegate.flush();
         }
 
         @Override
