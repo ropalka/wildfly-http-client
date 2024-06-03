@@ -27,89 +27,9 @@ import java.io.OutputStream;
  */
 interface ByteOutputs {
 
-    static ByteOutput unclosable(final ByteOutput delegate) {
-        if (delegate == null) throw new IllegalArgumentException();
-        return new UnclosableByteOutput(delegate);
-    }
-
-    static ByteOutput unflushable(final ByteOutput delegate) {
-        if (delegate == null) throw new IllegalArgumentException();
-        return new UnflushableByteOutput(delegate);
-    }
-
     static ByteOutput byteOutputOf(final OutputStream delegate) {
         if (delegate == null) throw new IllegalArgumentException();
         return new ByteOutputStream(delegate);
-    }
-
-    final class UnclosableByteOutput implements ByteOutput {
-
-        private final ByteOutput delegate;
-
-        UnclosableByteOutput(final ByteOutput delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public void close() throws IOException {
-            // does nothing
-        }
-
-        @Override
-        public void flush() throws IOException {
-            delegate.flush();
-        }
-
-        @Override
-        public void write(final int b) throws IOException {
-            delegate.write(b);
-        }
-
-        @Override
-        public void write(final byte[] b) throws IOException {
-            delegate.write(b);
-        }
-
-        @Override
-        public void write(final byte[] b, final int off, final int len) throws IOException {
-            delegate.write(b, off, len);
-        }
-
-    }
-
-    final class UnflushableByteOutput implements ByteOutput {
-
-        private final ByteOutput delegate;
-
-        UnflushableByteOutput(final ByteOutput delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public void close() throws IOException {
-            delegate.close();
-        }
-
-        @Override
-        public void flush() throws IOException {
-            // does nothing
-        }
-
-        @Override
-        public void write(final int b) throws IOException {
-            delegate.write(b);
-        }
-
-        @Override
-        public void write(final byte[] b) throws IOException {
-            delegate.write(b);
-        }
-
-        @Override
-        public void write(final byte[] b, final int off, final int len) throws IOException {
-            delegate.write(b, off, len);
-        }
-
     }
 
     final class ByteOutputStream implements ByteOutput {
