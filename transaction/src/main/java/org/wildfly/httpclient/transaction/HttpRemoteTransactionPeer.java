@@ -20,12 +20,10 @@ package org.wildfly.httpclient.transaction;
 
 import static java.security.AccessController.doPrivileged;
 import static org.wildfly.httpclient.transaction.Constants.NEW_TRANSACTION;
-import static org.wildfly.httpclient.transaction.Serializer.deserializeXid;
-import static org.wildfly.httpclient.transaction.Serializer.deserializeXidArray;
+import static org.wildfly.httpclient.transaction.Helper.xidArrayResponseHandler;
+import static org.wildfly.httpclient.transaction.Helper.xidResponseHandler;
 
 import io.undertow.client.ClientRequest;
-import org.jboss.marshalling.ByteInput;
-import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
@@ -34,12 +32,12 @@ import org.wildfly.security.auth.client.AuthenticationContextConfigurationClient
 import org.wildfly.transaction.client.spi.RemoteTransactionPeer;
 import org.wildfly.transaction.client.spi.SimpleTransactionControl;
 import org.wildfly.transaction.client.spi.SubordinateTransactionControl;
-import org.xnio.IoUtils;
 
 import javax.net.ssl.SSLContext;
 import jakarta.transaction.SystemException;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.Xid;
+import java.io.IOException;
 import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.util.concurrent.CompletableFuture;
@@ -76,7 +74,6 @@ public class HttpRemoteTransactionPeer implements RemoteTransactionPeer {
 
     @Override
     public Xid[] recover(int flag, String parentName) throws XAException {
-        final CompletableFuture<Xid[]> xidList = new CompletableFuture<>();
 
         RequestBuilder builder = new RequestBuilder().setRequestType(RequestType.XA_RECOVER).setVersion(targetContext.getProtocolVersion()).setFlags(flag).setParent(parentName);
         final ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
@@ -90,20 +87,18 @@ public class HttpRemoteTransactionPeer implements RemoteTransactionPeer {
             xaException.initCause(e);
             throw xaException;
         }
+        Unmarshaller unmarshaller;
+        try {
+            unmarshaller = targetContext.getHttpMarshallerFactory(request).createUnmarshaller();
+        } catch (IOException e) {
+            XAException xaException = new XAException(XAException.XAER_RMFAIL);
+            xaException.initCause(e);
+            throw xaException;
+        }
 
-        targetContext.sendRequest(request,  sslContext, authenticationConfiguration,null, (result, response, closeable) -> {
-            try (ByteInput in = new InputStreamByteInput(result)) {
-                Unmarshaller unmarshaller = targetContext.getHttpMarshallerFactory(request).createUnmarshaller();
-                unmarshaller.start(in);
-                Xid[] ret = deserializeXidArray(unmarshaller);
-                unmarshaller.finish();
-                xidList.complete(ret);
-            } catch (Exception e) {
-                xidList.completeExceptionally(e);
-            } finally {
-                IoUtils.safeClose(closeable);
-            }
-        }, xidList::completeExceptionally, NEW_TRANSACTION, null);
+        final CompletableFuture<Xid[]> xidList = new CompletableFuture<>();
+        targetContext.sendRequest(request,  sslContext, authenticationConfiguration,null,
+                xidArrayResponseHandler(unmarshaller, xidList), xidList::completeExceptionally, NEW_TRANSACTION, null);
         try {
             return xidList.get();
         } catch (InterruptedException e) {
@@ -122,8 +117,6 @@ public class HttpRemoteTransactionPeer implements RemoteTransactionPeer {
 
     @Override
     public SimpleTransactionControl begin(int timeout) throws SystemException {
-        final CompletableFuture<Xid> beginXid = new CompletableFuture<>();
-
         RequestBuilder builder = new RequestBuilder().setRequestType(RequestType.UT_BEGIN).setVersion(targetContext.getProtocolVersion()).setTimeout(timeout);
         final ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
 
@@ -135,23 +128,19 @@ public class HttpRemoteTransactionPeer implements RemoteTransactionPeer {
             throw new SystemException(e.getMessage());
         }
 
-        targetContext.sendRequest(request, sslContext, authenticationConfiguration, null, (result, response, closeable) -> {
-            try (ByteInput in = new InputStreamByteInput(result)) {
-                Unmarshaller unmarshaller = targetContext.getHttpMarshallerFactory(request).createUnmarshaller();
-                unmarshaller.start(in);
-                Xid simpleXid = deserializeXid(unmarshaller);
-                unmarshaller.finish();
-                beginXid.complete(simpleXid);
-            } catch (Exception e) {
-                beginXid.completeExceptionally(e);
-            } finally {
-                IoUtils.safeClose(closeable);
-            }
-        }, beginXid::completeExceptionally, NEW_TRANSACTION, null);
+        Unmarshaller unmarshaller;
+        try {
+            unmarshaller = targetContext.getHttpMarshallerFactory(request).createUnmarshaller();
+        } catch (IOException e) {
+            throw new SystemException(e.getMessage());
+        }
+
+        final CompletableFuture<Xid> beginXid = new CompletableFuture<>();
+        targetContext.sendRequest(request, sslContext, authenticationConfiguration, null,
+                xidResponseHandler(unmarshaller, beginXid), beginXid::completeExceptionally, NEW_TRANSACTION, null);
         try {
             Xid xid = beginXid.get();
             return new HttpRemoteTransactionHandle(xid, targetContext, sslContext, authenticationConfiguration);
-
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (ExecutionException e) {

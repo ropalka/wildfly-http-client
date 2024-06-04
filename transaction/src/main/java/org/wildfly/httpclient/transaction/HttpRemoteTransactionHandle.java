@@ -18,6 +18,7 @@
 
 package org.wildfly.httpclient.transaction;
 
+import static org.wildfly.httpclient.transaction.Helper.emptyResponseHandler;
 import static org.wildfly.httpclient.transaction.Serializer.serializeXid;
 import static org.wildfly.httpclient.transaction.ByteOutputs.byteOutputOf;
 
@@ -28,7 +29,6 @@ import org.wildfly.httpclient.common.HttpTargetContext;
 import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
 import org.wildfly.transaction.client.spi.SimpleTransactionControl;
-import org.xnio.IoUtils;
 
 import javax.net.ssl.SSLContext;
 import jakarta.transaction.HeuristicMixedException;
@@ -93,13 +93,7 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
                     serializeXid(marshaller, id);
                     marshaller.finish();
                 }
-            }, (input, response, closable) -> {
-                try {
-                    result.complete(null);
-                } finally {
-                    IoUtils.safeClose(closable);
-                }
-            }, result::completeExceptionally, null, null);
+            }, emptyResponseHandler(result), result::completeExceptionally, null, null);
 
             try {
                 result.get();
@@ -156,13 +150,7 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
                     serializeXid(marshaller, id);
                     marshaller.finish();
                 }
-            }, (input, response, closeable) -> {
-                try {
-                    result.complete(null);
-                } finally {
-                    IoUtils.safeClose(closeable);
-                }
-            }, result::completeExceptionally, null, null);
+            }, emptyResponseHandler(result), result::completeExceptionally, null, null);
 
             try {
                 result.get();
