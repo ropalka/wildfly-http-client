@@ -18,18 +18,16 @@
 
 package org.wildfly.httpclient.transaction;
 
-import static org.wildfly.httpclient.transaction.ByteOutputs.byteOutputOf;
 import static org.wildfly.httpclient.transaction.Constants.READ_ONLY;
+import static org.wildfly.httpclient.transaction.Helper.xidRequestHandler;
 import static org.wildfly.httpclient.transaction.RequestType.XA_BEFORE_COMPLETION;
 import static org.wildfly.httpclient.transaction.RequestType.XA_COMMIT;
 import static org.wildfly.httpclient.transaction.RequestType.XA_FORGET;
 import static org.wildfly.httpclient.transaction.RequestType.XA_PREPARE;
 import static org.wildfly.httpclient.transaction.RequestType.XA_ROLLBACK;
-import static org.wildfly.httpclient.transaction.Serializer.serializeXid;
 
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
-import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
 import org.wildfly.httpclient.common.NoFlushByteOutput;
@@ -41,6 +39,7 @@ import javax.net.ssl.SSLContext;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
@@ -111,14 +110,16 @@ class HttpSubordinateTransactionHandle implements SubordinateTransactionControl 
 
         RequestBuilder builder = new RequestBuilder().setRequestType(requestType).setVersion(targetContext.getProtocolVersion()).setOnePhase(onePhase);
         final ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
-        targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
-            Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-            try (ByteOutput out = new NoFlushByteOutput(byteOutputOf(output))) {
-                marshaller.start(out);
-                serializeXid(marshaller, id);
-                marshaller.finish();
-            }
-        }, (input, response, closeable) -> {
+        Marshaller marshaller;
+        try {
+            marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
+        } catch (IOException e) {
+            XAException xaException = new XAException(XAException.XAER_RMERR);
+            xaException.initCause(e);
+            throw xaException;
+        }
+        targetContext.sendRequest(request, sslContext, authenticationConfiguration,
+                xidRequestHandler(marshaller, id), (input, response, closeable) -> {
             try {
                 result.complete(resultFunction != null ? resultFunction.apply(response) : null);
             } finally {

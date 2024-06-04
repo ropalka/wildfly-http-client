@@ -19,11 +19,9 @@
 package org.wildfly.httpclient.transaction;
 
 import static org.wildfly.httpclient.transaction.Helper.emptyResponseHandler;
-import static org.wildfly.httpclient.transaction.Serializer.serializeXid;
-import static org.wildfly.httpclient.transaction.ByteOutputs.byteOutputOf;
+import static org.wildfly.httpclient.transaction.Helper.xidRequestHandler;
 
 import io.undertow.client.ClientRequest;
-import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
 import org.wildfly.httpclient.common.NoFlushByteOutput;
@@ -37,6 +35,7 @@ import jakarta.transaction.RollbackException;
 import jakarta.transaction.Status;
 import jakarta.transaction.SystemException;
 import javax.transaction.xa.Xid;
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -85,15 +84,15 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
             RequestBuilder builder = new RequestBuilder().setRequestType(RequestType.UT_COMMIT).setVersion(targetContext.getProtocolVersion());
             final ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
 
+            Marshaller marshaller;
+            try {
+                marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
+            } catch (IOException e) {
+                throw new SystemException(e.getMessage());
+            }
             final CompletableFuture<Void> result = new CompletableFuture<>();
-            targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
-                Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-                try (ByteOutput out = new NoFlushByteOutput(byteOutputOf(output))) {
-                    marshaller.start(out);
-                    serializeXid(marshaller, id);
-                    marshaller.finish();
-                }
-            }, emptyResponseHandler(result), result::completeExceptionally, null, null);
+            targetContext.sendRequest(request, sslContext, authenticationConfiguration,
+                    xidRequestHandler(marshaller, id), emptyResponseHandler(result), result::completeExceptionally, null, null);
 
             try {
                 result.get();
@@ -142,15 +141,15 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
             RequestBuilder builder = new RequestBuilder().setRequestType(RequestType.UT_ROLLBACK).setVersion(targetContext.getProtocolVersion());
             final ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
 
+            Marshaller marshaller;
+            try {
+                marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
+            } catch (IOException e) {
+                throw new SystemException(e.getMessage());
+            }
             final CompletableFuture<Void> result = new CompletableFuture<>();
-            targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
-                Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-                try (ByteOutput out = new NoFlushByteOutput(byteOutputOf(output))) {
-                    marshaller.start(out);
-                    serializeXid(marshaller, id);
-                    marshaller.finish();
-                }
-            }, emptyResponseHandler(result), result::completeExceptionally, null, null);
+            targetContext.sendRequest(request, sslContext, authenticationConfiguration,
+                    xidRequestHandler(marshaller, id), emptyResponseHandler(result), result::completeExceptionally, null, null);
 
             try {
                 result.get();
