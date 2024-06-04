@@ -20,6 +20,7 @@ package org.wildfly.httpclient.transaction;
 
 import static org.wildfly.httpclient.transaction.Constants.READ_ONLY;
 import static org.wildfly.httpclient.transaction.Helper.xidRequestHandler;
+import static org.wildfly.httpclient.transaction.Helper.emptyResponseHandler;
 import static org.wildfly.httpclient.transaction.RequestType.XA_BEFORE_COMPLETION;
 import static org.wildfly.httpclient.transaction.RequestType.XA_COMMIT;
 import static org.wildfly.httpclient.transaction.RequestType.XA_FORGET;
@@ -33,7 +34,6 @@ import org.wildfly.httpclient.common.HttpTargetContext;
 import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
 import org.wildfly.transaction.client.spi.SubordinateTransactionControl;
-import org.xnio.IoUtils;
 
 import javax.net.ssl.SSLContext;
 import javax.transaction.xa.XAException;
@@ -119,13 +119,7 @@ class HttpSubordinateTransactionHandle implements SubordinateTransactionControl 
             throw xaException;
         }
         targetContext.sendRequest(request, sslContext, authenticationConfiguration,
-                xidRequestHandler(marshaller, id), (input, response, closeable) -> {
-            try {
-                result.complete(resultFunction != null ? resultFunction.apply(response) : null);
-            } finally {
-                IoUtils.safeClose(closeable);
-            }
-        }, result::completeExceptionally, null, null);
+                xidRequestHandler(marshaller, id), emptyResponseHandler(result, resultFunction), result::completeExceptionally, null, null);
 
         try {
             try {

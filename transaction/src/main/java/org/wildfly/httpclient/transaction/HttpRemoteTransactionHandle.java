@@ -92,7 +92,7 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
             }
             final CompletableFuture<Void> result = new CompletableFuture<>();
             targetContext.sendRequest(request, sslContext, authenticationConfiguration,
-                    xidRequestHandler(marshaller, id), emptyResponseHandler(result), result::completeExceptionally, null, null);
+                    xidRequestHandler(marshaller, id), emptyResponseHandler(result, null), result::completeExceptionally, null, null);
 
             try {
                 result.get();
@@ -149,7 +149,7 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
             }
             final CompletableFuture<Void> result = new CompletableFuture<>();
             targetContext.sendRequest(request, sslContext, authenticationConfiguration,
-                    xidRequestHandler(marshaller, id), emptyResponseHandler(result), result::completeExceptionally, null, null);
+                    xidRequestHandler(marshaller, id), emptyResponseHandler(result, null), result::completeExceptionally, null, null);
 
             try {
                 result.get();
