@@ -19,9 +19,9 @@
 package org.wildfly.httpclient.transaction;
 
 import static java.security.AccessController.doPrivileged;
+import static org.wildfly.httpclient.transaction.ClientHandlers.xidArrayResponseHandler;
+import static org.wildfly.httpclient.transaction.ClientHandlers.xidResponseHandler;
 import static org.wildfly.httpclient.transaction.Constants.NEW_TRANSACTION;
-import static org.wildfly.httpclient.transaction.Helper.xidArrayResponseHandler;
-import static org.wildfly.httpclient.transaction.Helper.xidResponseHandler;
 
 import io.undertow.client.ClientRequest;
 import org.jboss.marshalling.Unmarshaller;

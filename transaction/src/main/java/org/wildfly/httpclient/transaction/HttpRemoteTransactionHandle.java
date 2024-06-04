@@ -18,8 +18,8 @@
 
 package org.wildfly.httpclient.transaction;
 
-import static org.wildfly.httpclient.transaction.Helper.emptyResponseHandler;
-import static org.wildfly.httpclient.transaction.Helper.xidRequestHandler;
+import static org.wildfly.httpclient.transaction.ClientHandlers.emptyResponseHandler;
+import static org.wildfly.httpclient.transaction.ClientHandlers.xidRequestHandler;
 
 import io.undertow.client.ClientRequest;
 import org.jboss.marshalling.Marshaller;

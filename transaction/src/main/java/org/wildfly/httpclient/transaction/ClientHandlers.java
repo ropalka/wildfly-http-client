@@ -42,9 +42,9 @@ import java.util.function.Function;
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-final class Helper {
+final class ClientHandlers {
 
-    private Helper() {
+    private ClientHandlers() {
         // forbidden instantiation
     }
 
