@@ -296,29 +296,19 @@ public class HttpRootContext extends AbstractContext {
                 }
 
                 httpNamingProvider.performExceptionAction((a, b) -> {
-                    Exception exception = null;
-                    Object returned = null;
                     ClassLoader old = setContextClassLoader(tccl);
                     try {
-                        final Unmarshaller unmarshaller = createUnmarshaller(providerUri, targetContext.getHttpMarshallerFactory(clientRequest));
+                       final Unmarshaller unmarshaller = createUnmarshaller(providerUri, targetContext.getHttpMarshallerFactory(clientRequest));
                        try (ByteInput in = new InputStreamByteInput(input)) {
                             unmarshaller.start(in);
-                            returned = deserializeObject(unmarshaller);
+                            Object returned = deserializeObject(unmarshaller);
                             unmarshaller.finish();
-                        }
-
-                        if (response.getResponseCode() >= 400) {
-                            exception = (Exception) returned;
-                        }
+                            result.complete(returned);
+                       }
                     } catch (Exception e) {
-                        exception = e;
+                        result.completeExceptionally(e);
                     } finally {
                         setContextClassLoader(old);
-                    }
-                    if (exception != null) {
-                        result.completeExceptionally(exception);
-                    } else {
-                        result.complete(returned);
                     }
                     return null;
                 }, null, null);
