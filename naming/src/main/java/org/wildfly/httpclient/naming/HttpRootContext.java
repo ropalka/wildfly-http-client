@@ -290,13 +290,12 @@ public class HttpRootContext extends AbstractContext {
         targetContext.sendRequest(clientRequest, sslContext, authenticationConfiguration, null, (input, response, closeable) -> {
             try {
                 if (response.getResponseCode() == StatusCodes.NO_CONTENT) {
-                    result.complete(new HttpRemoteContext(HttpRootContext.this, name.toString()));
+                    result.complete(null);
                     IoUtils.safeClose(input);
                     return;
                 }
 
                 httpNamingProvider.performExceptionAction((a, b) -> {
-
                     Exception exception = null;
                     Object returned = null;
                     ClassLoader old = setContextClassLoader(tccl);
@@ -329,7 +328,8 @@ public class HttpRootContext extends AbstractContext {
         }, result::completeExceptionally, VALUE, null, true);
 
         try {
-            return result.get();
+            Object ret = result.get();
+            return ret == null ? new HttpRemoteContext(HttpRootContext.this, name.toString()) : ret;
         } catch (InterruptedException e) {
             NamingException namingException = new NamingException(e.getMessage());
             namingException.initCause(e);
