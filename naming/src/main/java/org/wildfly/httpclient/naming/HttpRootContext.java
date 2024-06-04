@@ -21,14 +21,11 @@ package org.wildfly.httpclient.naming;
 import io.undertow.client.ClientRequest;
 import io.undertow.util.StatusCodes;
 import org.jboss.marshalling.ByteInput;
-import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
-import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
 import org.wildfly.httpclient.common.HttpTargetContext;
-import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.httpclient.common.WildflyHttpContext;
 import org.wildfly.naming.client.AbstractContext;
 import org.wildfly.naming.client.CloseableNamingEnumeration;
@@ -63,6 +60,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static java.security.AccessController.doPrivileged;
+import static org.wildfly.httpclient.naming.ClientHandlers.emptyResponseHandler;
+import static org.wildfly.httpclient.naming.ClientHandlers.objectRequestHandler;
 import static org.wildfly.httpclient.naming.Constants.HTTPS_PORT;
 import static org.wildfly.httpclient.naming.Constants.HTTPS_SCHEME;
 import static org.wildfly.httpclient.naming.Constants.HTTP_PORT;
@@ -78,7 +77,6 @@ import static org.wildfly.httpclient.naming.RequestType.REBIND;
 import static org.wildfly.httpclient.naming.RequestType.RENAME;
 import static org.wildfly.httpclient.naming.RequestType.UNBIND;
 import static org.wildfly.httpclient.naming.Serializer.deserializeObject;
-import static org.wildfly.httpclient.naming.Serializer.serializeObject;
 
 /**
  * Root naming context.
@@ -371,24 +369,16 @@ public class HttpRootContext extends AbstractContext {
             e2.initCause(e);
             throw e2;
         }
-        targetContext.sendRequest(clientRequest, sslContext, authenticationConfiguration, output -> {
-            if (object != null) {
-                Marshaller marshaller = createMarshaller(providerUri, targetContext.getHttpMarshallerFactory(clientRequest));
-                ByteOutput out = new NoFlushByteOutput(Marshalling.createByteOutput(output));
-                try (out) {
-                    marshaller.start(out);
-                    serializeObject(marshaller, object);
-                    marshaller.finish();
-                }
-            }
-        }, (input, response, closeable) -> {
-            try {
-                result.complete(null);
-            } finally {
-                IoUtils.safeClose(closeable);
-            }
-        }, result::completeExceptionally, null, null);
-
+        Marshaller marshaller;
+        try {
+            marshaller = createMarshaller(providerUri, targetContext.getHttpMarshallerFactory(clientRequest));
+        } catch (IOException e) {
+            NamingException namingException = new NamingException(e.getMessage());
+            namingException.initCause(e);
+            throw namingException;
+        }
+        targetContext.sendRequest(clientRequest, sslContext, authenticationConfiguration,
+                object != null ? objectRequestHandler(marshaller, object) : null, emptyResponseHandler(result, null), result::completeExceptionally, null, null);
         try {
             result.get();
         } catch (InterruptedException e) {
