@@ -80,12 +80,12 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
             if (oldVal != Status.STATUS_ACTIVE) {
                 throw HttpRemoteTransactionMessages.MESSAGES.invalidTxnState();
             }
-            final CompletableFuture<Void> result = new CompletableFuture<>();
             statusRef.set(Status.STATUS_COMMITTING);
 
             RequestBuilder builder = new RequestBuilder().setRequestType(RequestType.UT_COMMIT).setVersion(targetContext.getProtocolVersion());
             final ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
 
+            final CompletableFuture<Void> result = new CompletableFuture<>();
             targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
                 Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
                 try (ByteOutput out = new NoFlushByteOutput(byteOutputOf(output))) {
@@ -143,12 +143,12 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
             }
             statusRef.set(Status.STATUS_ROLLING_BACK);
 
-            final CompletableFuture<Void> result = new CompletableFuture<>();
             statusRef.set(Status.STATUS_COMMITTING);
 
             RequestBuilder builder = new RequestBuilder().setRequestType(RequestType.UT_ROLLBACK).setVersion(targetContext.getProtocolVersion());
             final ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
 
+            final CompletableFuture<Void> result = new CompletableFuture<>();
             targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
                 Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
                 try (ByteOutput out = new NoFlushByteOutput(byteOutputOf(output))) {
