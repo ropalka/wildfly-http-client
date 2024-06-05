@@ -286,6 +286,14 @@ public class HttpRootContext extends AbstractContext {
             e2.initCause(e);
             throw e2;
         }
+        final Unmarshaller unmarshaller;
+        try {
+            unmarshaller = createUnmarshaller(providerUri, targetContext.getHttpMarshallerFactory(clientRequest));
+        } catch (IOException e) {
+            NamingException namingException = new NamingException(e.getMessage());
+            namingException.initCause(e);
+            throw namingException;
+        }
         final ClassLoader tccl = getContextClassLoader();
         targetContext.sendRequest(clientRequest, sslContext, authenticationConfiguration, null, (input, response, closeable) -> {
             try {
@@ -297,14 +305,11 @@ public class HttpRootContext extends AbstractContext {
 
                 httpNamingProvider.performExceptionAction((a, b) -> {
                     ClassLoader old = setContextClassLoader(tccl);
-                    try {
-                       final Unmarshaller unmarshaller = createUnmarshaller(providerUri, targetContext.getHttpMarshallerFactory(clientRequest));
-                       try (ByteInput in = new InputStreamByteInput(input)) {
-                            unmarshaller.start(in);
-                            Object returned = deserializeObject(unmarshaller);
-                            unmarshaller.finish();
-                            result.complete(returned);
-                       }
+                    try (ByteInput in = new InputStreamByteInput(input)) {
+                        unmarshaller.start(in);
+                        Object returned = deserializeObject(unmarshaller);
+                        unmarshaller.finish();
+                        result.complete(returned);
                     } catch (Exception e) {
                         result.completeExceptionally(e);
                     } finally {
