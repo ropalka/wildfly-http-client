@@ -20,8 +20,6 @@ package org.wildfly.httpclient.naming;
 
 import io.undertow.client.ClientRequest;
 import io.undertow.util.StatusCodes;
-import org.jboss.marshalling.ByteInput;
-import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
@@ -62,6 +60,7 @@ import java.util.concurrent.ExecutionException;
 import static java.security.AccessController.doPrivileged;
 import static org.wildfly.httpclient.naming.ClientHandlers.emptyResponseHandler;
 import static org.wildfly.httpclient.naming.ClientHandlers.objectRequestHandler;
+import static org.wildfly.httpclient.naming.ClientHandlers.objectResponseHandler;
 import static org.wildfly.httpclient.naming.Constants.HTTPS_PORT;
 import static org.wildfly.httpclient.naming.Constants.HTTPS_SCHEME;
 import static org.wildfly.httpclient.naming.Constants.HTTP_PORT;
@@ -76,7 +75,6 @@ import static org.wildfly.httpclient.naming.RequestType.LOOKUP_LINK;
 import static org.wildfly.httpclient.naming.RequestType.REBIND;
 import static org.wildfly.httpclient.naming.RequestType.RENAME;
 import static org.wildfly.httpclient.naming.RequestType.UNBIND;
-import static org.wildfly.httpclient.naming.Serializer.deserializeObject;
 
 /**
  * Root naming context.
@@ -297,21 +295,14 @@ public class HttpRootContext extends AbstractContext {
         final ClassLoader tccl = getContextClassLoader();
         targetContext.sendRequest(clientRequest, sslContext, authenticationConfiguration, null, (input, response, closeable) -> {
             try {
-                if (response.getResponseCode() == StatusCodes.NO_CONTENT) {
-                    result.complete(null);
-                    IoUtils.safeClose(input);
-                    return;
-                }
-
                 httpNamingProvider.performExceptionAction((a, b) -> {
                     ClassLoader old = setContextClassLoader(tccl);
-                    try (ByteInput in = new InputStreamByteInput(input)) {
-                        unmarshaller.start(in);
-                        Object returned = deserializeObject(unmarshaller);
-                        unmarshaller.finish();
-                        result.complete(returned);
-                    } catch (Exception e) {
-                        result.completeExceptionally(e);
+                    try {
+                        if (response.getResponseCode() == StatusCodes.NO_CONTENT) {
+                            emptyResponseHandler(result, null).handleResult(input, response, closeable);
+                        } else {
+                            objectResponseHandler(unmarshaller, result).handleResult(input, response, closeable);
+                        }
                     } finally {
                         setContextClassLoader(old);
                     }
