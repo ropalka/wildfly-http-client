@@ -20,15 +20,18 @@ package org.wildfly.httpclient.naming;
 import static org.wildfly.httpclient.naming.ByteOutputs.byteOutputOf;
 import static org.wildfly.httpclient.naming.Serializer.deserializeObject;
 import static org.wildfly.httpclient.naming.Serializer.serializeObject;
+import static org.wildfly.httpclient.naming.ClassLoaderUtils.setContextClassLoader;
+import static org.xnio.IoUtils.safeClose;
 
 import io.undertow.client.ClientResponse;
+import io.undertow.util.StatusCodes;
 import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
-import org.xnio.IoUtils;
+import org.wildfly.naming.client.NamingProvider;
 
 import java.io.Closeable;
 import java.io.InputStream;
@@ -57,6 +60,10 @@ final class ClientHandlers {
         return new ObjectResponseHandler(unmarshaller, result);
     }
 
+    static HttpTargetContext.HttpResultHandler jndiClassLoaderAwareResponseHandler(final Unmarshaller unmarshaller, final CompletableFuture<Object> result, final NamingProvider namingProvider, final ClassLoader classLoader) {
+        return new JndiClassLoaderAwareResponseHandler(unmarshaller, result, namingProvider, classLoader);
+    }
+
     private static final class EmptyResponseHandler<T> implements HttpTargetContext.HttpResultHandler {
         private final CompletableFuture<T> result;
         private final Function<ClientResponse, T> function;
@@ -71,7 +78,7 @@ final class ClientHandlers {
             try {
                 result.complete(function != null ? function.apply(httpResponse) : null);
             } finally {
-                IoUtils.safeClose(doneCallback);
+                safeClose(doneCallback);
             }
         }
     }
@@ -114,7 +121,42 @@ final class ClientHandlers {
             } catch (Exception e) {
                 result.completeExceptionally(e);
             } finally {
-                IoUtils.safeClose(doneCallback);
+                safeClose(doneCallback);
+            }
+        }
+    }
+
+    private static final class JndiClassLoaderAwareResponseHandler implements HttpTargetContext.HttpResultHandler {
+        private final CompletableFuture<Object> result;
+        private final Unmarshaller unmarshaller;
+        private final NamingProvider namingProvider;
+        private final ClassLoader classLoader;
+
+        private JndiClassLoaderAwareResponseHandler(final Unmarshaller unmarshaller, final CompletableFuture<Object> result, final NamingProvider namingProvider, final ClassLoader classLoader) {
+            this.unmarshaller = unmarshaller;
+            this.result = result;
+            this.namingProvider = namingProvider;
+            this.classLoader = classLoader;
+        }
+
+        @Override
+        public void handleResult(final InputStream httpBodyResponseStream, final ClientResponse httpResponse, final Closeable doneCallback) {
+            try {
+                namingProvider.performExceptionAction((a, b) -> {
+                    ClassLoader old = setContextClassLoader(classLoader);
+                    try {
+                        if (httpResponse.getResponseCode() == StatusCodes.NO_CONTENT) {
+                            emptyResponseHandler(result, null).handleResult(httpBodyResponseStream, httpResponse, doneCallback);
+                        } else {
+                            objectResponseHandler(unmarshaller, result).handleResult(httpBodyResponseStream, httpResponse, doneCallback);
+                        }
+                    } finally {
+                        setContextClassLoader(old);
+                    }
+                    return null;
+                }, null, null);
+            } finally {
+                safeClose(doneCallback);
             }
         }
     }

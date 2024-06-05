@@ -18,8 +18,27 @@
 
 package org.wildfly.httpclient.naming;
 
+import static java.security.AccessController.doPrivileged;
+import static org.wildfly.httpclient.naming.ClassLoaderUtils.getContextClassLoader;
+import static org.wildfly.httpclient.naming.ClientHandlers.emptyResponseHandler;
+import static org.wildfly.httpclient.naming.ClientHandlers.jndiClassLoaderAwareResponseHandler;
+import static org.wildfly.httpclient.naming.ClientHandlers.objectRequestHandler;
+import static org.wildfly.httpclient.naming.Constants.HTTPS_PORT;
+import static org.wildfly.httpclient.naming.Constants.HTTPS_SCHEME;
+import static org.wildfly.httpclient.naming.Constants.HTTP_PORT;
+import static org.wildfly.httpclient.naming.Constants.VALUE;
+import static org.wildfly.httpclient.naming.RequestType.BIND;
+import static org.wildfly.httpclient.naming.RequestType.CREATE_SUBCONTEXT;
+import static org.wildfly.httpclient.naming.RequestType.DESTROY_SUBCONTEXT;
+import static org.wildfly.httpclient.naming.RequestType.LIST;
+import static org.wildfly.httpclient.naming.RequestType.LIST_BINDINGS;
+import static org.wildfly.httpclient.naming.RequestType.LOOKUP;
+import static org.wildfly.httpclient.naming.RequestType.LOOKUP_LINK;
+import static org.wildfly.httpclient.naming.RequestType.REBIND;
+import static org.wildfly.httpclient.naming.RequestType.RENAME;
+import static org.wildfly.httpclient.naming.RequestType.UNBIND;
+
 import io.undertow.client.ClientRequest;
-import io.undertow.util.StatusCodes;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
@@ -36,7 +55,6 @@ import org.wildfly.naming.client.util.FastHashtable;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
 import org.wildfly.security.auth.client.AuthenticationContext;
 import org.wildfly.security.auth.client.AuthenticationContextConfigurationClient;
-import org.xnio.IoUtils;
 
 import javax.naming.Binding;
 import javax.naming.CommunicationException;
@@ -48,7 +66,6 @@ import javax.naming.NamingException;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.URI;
-import java.security.AccessController;
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedAction;
 import java.util.Collection;
@@ -56,25 +73,6 @@ import java.util.Iterator;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
-import static java.security.AccessController.doPrivileged;
-import static org.wildfly.httpclient.naming.ClientHandlers.emptyResponseHandler;
-import static org.wildfly.httpclient.naming.ClientHandlers.objectRequestHandler;
-import static org.wildfly.httpclient.naming.ClientHandlers.objectResponseHandler;
-import static org.wildfly.httpclient.naming.Constants.HTTPS_PORT;
-import static org.wildfly.httpclient.naming.Constants.HTTPS_SCHEME;
-import static org.wildfly.httpclient.naming.Constants.HTTP_PORT;
-import static org.wildfly.httpclient.naming.Constants.VALUE;
-import static org.wildfly.httpclient.naming.RequestType.BIND;
-import static org.wildfly.httpclient.naming.RequestType.CREATE_SUBCONTEXT;
-import static org.wildfly.httpclient.naming.RequestType.DESTROY_SUBCONTEXT;
-import static org.wildfly.httpclient.naming.RequestType.LIST;
-import static org.wildfly.httpclient.naming.RequestType.LIST_BINDINGS;
-import static org.wildfly.httpclient.naming.RequestType.LOOKUP;
-import static org.wildfly.httpclient.naming.RequestType.LOOKUP_LINK;
-import static org.wildfly.httpclient.naming.RequestType.REBIND;
-import static org.wildfly.httpclient.naming.RequestType.RENAME;
-import static org.wildfly.httpclient.naming.RequestType.UNBIND;
 
 /**
  * Root naming context.
@@ -87,12 +85,6 @@ public class HttpRootContext extends AbstractContext {
     private static final int MAX_NOT_FOUND_RETRY = Integer.getInteger("org.wildfly.httpclient.naming.max-retries", 8);
 
     private static final AuthenticationContextConfigurationClient CLIENT = doPrivileged(AuthenticationContextConfigurationClient.ACTION);
-    private static final PrivilegedAction<ClassLoader> GET_TCCL_ACTION = new PrivilegedAction<ClassLoader>() {
-        @Override
-        public ClassLoader run() {
-            return Thread.currentThread().getContextClassLoader();
-        }
-    };
     private final HttpNamingProvider httpNamingProvider;
     private final String scheme;
 
@@ -270,7 +262,6 @@ public class HttpRootContext extends AbstractContext {
     }
 
     private Object performOperation(Name name, URI providerUri, HttpTargetContext targetContext, ClientRequest clientRequest) throws NamingException {
-        final CompletableFuture<Object> result = new CompletableFuture<>();
         final ProviderEnvironment providerEnvironment = httpNamingProvider.getProviderEnvironment();
         final AuthenticationContext context = providerEnvironment.getAuthenticationContextSupplier().get();
         AuthenticationContextConfigurationClient client = CLIENT;
@@ -292,27 +283,10 @@ public class HttpRootContext extends AbstractContext {
             namingException.initCause(e);
             throw namingException;
         }
-        final ClassLoader tccl = getContextClassLoader();
-        targetContext.sendRequest(clientRequest, sslContext, authenticationConfiguration, null, (input, response, closeable) -> {
-            try {
-                httpNamingProvider.performExceptionAction((a, b) -> {
-                    ClassLoader old = setContextClassLoader(tccl);
-                    try {
-                        if (response.getResponseCode() == StatusCodes.NO_CONTENT) {
-                            emptyResponseHandler(result, null).handleResult(input, response, closeable);
-                        } else {
-                            objectResponseHandler(unmarshaller, result).handleResult(input, response, closeable);
-                        }
-                    } finally {
-                        setContextClassLoader(old);
-                    }
-                    return null;
-                }, null, null);
-            } finally {
-                IoUtils.safeClose(closeable);
-            }
-        }, result::completeExceptionally, VALUE, null, true);
-
+        final CompletableFuture<Object> result = new CompletableFuture<>();
+        targetContext.sendRequest(clientRequest, sslContext, authenticationConfiguration, null,
+                jndiClassLoaderAwareResponseHandler(unmarshaller, result, httpNamingProvider, getContextClassLoader()),
+                result::completeExceptionally, VALUE, null, true);
         try {
             Object ret = result.get();
             return ret == null ? new HttpRemoteContext(HttpRootContext.this, name.toString()) : ret;
@@ -394,29 +368,4 @@ public class HttpRootContext extends AbstractContext {
         return scheme == null || scheme.isEmpty() ? "" : scheme + ":";
     }
 
-    static ClassLoader getContextClassLoader() {
-        if(System.getSecurityManager() == null) {
-            return Thread.currentThread().getContextClassLoader();
-        } else {
-            return AccessController.doPrivileged(GET_TCCL_ACTION);
-        }
-    }
-
-    static ClassLoader setContextClassLoader(final ClassLoader cl) {
-
-        if(System.getSecurityManager() == null) {
-            ClassLoader old = Thread.currentThread().getContextClassLoader();
-            Thread.currentThread().setContextClassLoader(cl);
-            return old;
-        } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
-                @Override
-                public ClassLoader run() {
-                    ClassLoader old = Thread.currentThread().getContextClassLoader();
-                    Thread.currentThread().setContextClassLoader(cl);
-                    return old;
-                }
-            });
-        }
-    }
 }
