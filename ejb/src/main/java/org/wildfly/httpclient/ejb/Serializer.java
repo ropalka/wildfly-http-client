@@ -106,4 +106,18 @@ final class Serializer {
         out.write(xid.getBranchQualifier());
     }
 
+    static void serializeTransaction(final ObjectOutput out, final TransactionInfo transaction) throws IOException {
+        out.writeByte(transaction.getType());
+        if (transaction.getType() == TransactionInfo.NULL_TRANSACTION) {
+            return;
+        }
+        serializeXid(out, transaction.getXid());
+        if (transaction.getType() == TransactionInfo.REMOTE_TRANSACTION) {
+            return;
+        }
+        if (transaction.getType() == TransactionInfo.LOCAL_TRANSACTION) {
+            out.writeInt(transaction.getRemainingTime());
+        }
+    }
+
 }

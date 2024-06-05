@@ -25,7 +25,10 @@ import static org.wildfly.httpclient.ejb.Constants.HTTP_PORT;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeObject;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeMap;
 import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
-import static org.wildfly.httpclient.ejb.Serializer.serializeXid;
+import static org.wildfly.httpclient.ejb.Serializer.serializeTransaction;
+import static org.wildfly.httpclient.ejb.TransactionInfo.localTransaction;
+import static org.wildfly.httpclient.ejb.TransactionInfo.nullTransaction;
+import static org.wildfly.httpclient.ejb.TransactionInfo.remoteTransaction;
 
 import io.undertow.client.ClientRequest;
 import io.undertow.util.AttachmentKey;
@@ -63,8 +66,6 @@ import javax.net.ssl.SSLContext;
 import jakarta.transaction.RollbackException;
 import jakarta.transaction.SystemException;
 import jakarta.transaction.Transaction;
-import javax.transaction.xa.Xid;
-import java.io.ObjectOutput;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
@@ -288,10 +289,11 @@ class HttpEJBReceiver extends EJBReceiver {
                 .setView(locator.getViewType().getName())
                 .setVersion(targetContext.getProtocolVersion());
         ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
+        TransactionInfo transactionInfo = getTransactionInfo(ContextTransactionManager.getInstance().getTransaction(), targetContext.getUri());
         targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
                     Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
                     marshaller.start(Marshalling.createByteOutput(output));
-                    writeTransaction(ContextTransactionManager.getInstance().getTransaction(), marshaller, targetContext.getUri());
+                    serializeTransaction(marshaller, transactionInfo);
                     marshaller.finish();
                 },
                 ((unmarshaller, response, c) -> {
@@ -376,10 +378,11 @@ class HttpEJBReceiver extends EJBReceiver {
     }
 
     private void marshalEJBRequest(ByteOutput byteOutput, EJBClientInvocationContext clientInvocationContext, HttpTargetContext targetContext, ClientRequest clientRequest) throws IOException, RollbackException, SystemException {
+        TransactionInfo transactionInfo = getTransactionInfo(clientInvocationContext.getTransaction(), targetContext.getUri());
         try (byteOutput) {
             Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(clientRequest));
             marshaller.start(byteOutput);
-            writeTransaction(clientInvocationContext.getTransaction(), marshaller, targetContext.getUri());
+            serializeTransaction(marshaller, transactionInfo);
 
             Object[] methodParams = clientInvocationContext.getParameters();
             if (methodParams != null && methodParams.length > 0) {
@@ -393,26 +396,19 @@ class HttpEJBReceiver extends EJBReceiver {
         }
     }
 
-
-    private void writeTransaction(final Transaction transaction, final ObjectOutput dataOutput, URI uri) throws IOException, RollbackException, SystemException {
-
+    private TransactionInfo getTransactionInfo(final Transaction transaction, final URI uri) throws RollbackException, SystemException {
         if (transaction == null) {
-            dataOutput.writeByte(0);
+            return nullTransaction();
         } else if (transaction instanceof RemoteTransaction) {
             final RemoteTransaction remoteTransaction = (RemoteTransaction) transaction;
             remoteTransaction.setLocation(uri);
-            final XidProvider ir = remoteTransaction.getProviderInterface(XidProvider.class);
-            if (ir == null) throw EjbHttpClientMessages.MESSAGES.cannotEnlistTx();
-            Xid xid = ir.getXid();
-            dataOutput.writeByte(1);
-            serializeXid(dataOutput, xid);
+            final XidProvider xidProvider = remoteTransaction.getProviderInterface(XidProvider.class);
+            if (xidProvider == null) throw EjbHttpClientMessages.MESSAGES.cannotEnlistTx();
+            return remoteTransaction(xidProvider.getXid());
         } else if (transaction instanceof LocalTransaction) {
             final LocalTransaction localTransaction = (LocalTransaction) transaction;
             final XAOutflowHandle outflowHandle = transactionContext.outflowTransaction(uri, localTransaction);
-            final Xid xid = outflowHandle.getXid();
-            dataOutput.writeByte(2);
-            serializeXid(dataOutput, xid);
-            dataOutput.writeInt(outflowHandle.getRemainingTime());
+            return localTransaction(outflowHandle.getXid(), outflowHandle.getRemainingTime());
         } else {
             throw EjbHttpClientMessages.MESSAGES.cannotEnlistTx();
         }
