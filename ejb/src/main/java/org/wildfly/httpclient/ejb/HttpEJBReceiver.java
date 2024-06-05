@@ -29,7 +29,6 @@ import static org.wildfly.httpclient.ejb.Serializer.serializeXid;
 
 import io.undertow.client.ClientRequest;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.jboss.ejb.client.Affinity;
 import org.jboss.ejb.client.EJBClientInvocationContext;
@@ -147,7 +146,11 @@ class HttpEJBReceiver extends EJBReceiver {
 
 
         EjbContextData ejbData = targetContext.getAttachment(EJB_CONTEXT_DATA);
+        boolean compressResponse = receiverContext.getClientInvocationContext().isCompressResponse();
+        boolean compressRequest = receiverContext.getClientInvocationContext().isCompressRequest();
         RequestBuilder builder = new RequestBuilder()
+                .setCompressRequest(compressRequest)
+                .setCompressResponse(compressResponse)
                 .setRequestType(RequestType.START_INVOCATION)
                 .setLocator(locator)
                 .setMethod(clientInvocationContext.getInvokedMethod())
@@ -173,16 +176,7 @@ class HttpEJBReceiver extends EJBReceiver {
                 receiverContext.proceedAsynchronously();
             }
         }
-        boolean compressResponse = receiverContext.getClientInvocationContext().isCompressResponse();
         ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
-        if (compressResponse) {
-            request.getRequestHeaders().put(Headers.ACCEPT_ENCODING, Headers.GZIP.toString());
-        }
-        request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
-        final boolean compressRequest = receiverContext.getClientInvocationContext().isCompressRequest();
-        if (compressRequest) {
-            request.getRequestHeaders().put(Headers.CONTENT_ENCODING, Headers.GZIP.toString());
-        }
         final AuthenticationContext context = receiverContext.getAuthenticationContext();
         final AuthenticationContextConfigurationClient client = CLIENT;
         final int defaultPort = uri.getScheme().equals(HTTPS_SCHEME) ? HTTPS_PORT : HTTP_PORT;
