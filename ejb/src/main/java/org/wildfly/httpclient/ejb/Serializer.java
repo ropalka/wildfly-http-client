@@ -17,6 +17,13 @@
  */
 package org.wildfly.httpclient.ejb;
 
+import static org.wildfly.httpclient.ejb.TransactionInfo.LOCAL_TRANSACTION;
+import static org.wildfly.httpclient.ejb.TransactionInfo.NULL_TRANSACTION;
+import static org.wildfly.httpclient.ejb.TransactionInfo.REMOTE_TRANSACTION;
+import static org.wildfly.httpclient.ejb.TransactionInfo.localTransaction;
+import static org.wildfly.httpclient.ejb.TransactionInfo.nullTransaction;
+import static org.wildfly.httpclient.ejb.TransactionInfo.remoteTransaction;
+
 import org.jboss.ejb.client.EJBModuleIdentifier;
 import org.wildfly.transaction.client.SimpleXid;
 
@@ -106,18 +113,29 @@ final class Serializer {
         out.write(xid.getBranchQualifier());
     }
 
+    static TransactionInfo deserializeTransaction(final ObjectInput in) throws IOException {
+        final int txnType = in.readByte();
+        if (txnType == NULL_TRANSACTION) {
+            return nullTransaction();
+        } else if (txnType == REMOTE_TRANSACTION || txnType == LOCAL_TRANSACTION) {
+            final Xid xid = deserializeXid(in);
+            return txnType == REMOTE_TRANSACTION ? remoteTransaction(xid) : localTransaction(xid, in.readInt());
+        }
+        throw EjbHttpClientMessages.MESSAGES.invalidTransactionType(txnType);
+    }
+
     static void serializeTransaction(final ObjectOutput out, final TransactionInfo transaction) throws IOException {
-        out.writeByte(transaction.getType());
-        if (transaction.getType() == TransactionInfo.NULL_TRANSACTION) {
+        final byte transactionType = transaction.getType();
+        out.writeByte(transactionType);
+        if (transactionType == NULL_TRANSACTION) {
             return;
         }
         serializeXid(out, transaction.getXid());
-        if (transaction.getType() == TransactionInfo.REMOTE_TRANSACTION) {
+        if (transactionType == REMOTE_TRANSACTION) {
             return;
         }
-        if (transaction.getType() == TransactionInfo.LOCAL_TRANSACTION) {
+        if (transactionType == LOCAL_TRANSACTION) {
             out.writeInt(transaction.getRemainingTime());
         }
     }
-
 }

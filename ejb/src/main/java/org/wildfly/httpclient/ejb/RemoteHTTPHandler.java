@@ -18,13 +18,8 @@
 
 package org.wildfly.httpclient.ejb;
 
-import static org.wildfly.httpclient.ejb.Serializer.deserializeXid;
-
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
-import javax.transaction.xa.Xid;
 
-import org.jboss.marshalling.Unmarshaller;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
@@ -65,42 +60,4 @@ abstract class RemoteHTTPHandler implements HttpHandler {
 
     protected abstract void handleInternal(HttpServerExchange exchange) throws Exception;
 
-    protected ReceivedTransaction readTransaction(Unmarshaller unmarshaller) throws IOException {
-        int type = unmarshaller.readByte();
-        if (type == 0) {
-            return null;
-        } else if (type == 1 || type == 2) {
-            Xid simpleXid = deserializeXid(unmarshaller);
-            if (type == 2) {
-                return new ReceivedTransaction(simpleXid, unmarshaller.readInt(), true);
-            }
-            return new ReceivedTransaction(simpleXid, 0, false);
-        } else {
-            throw EjbHttpClientMessages.MESSAGES.invalidTransactionType(type);
-        }
-    }
-
-    static class ReceivedTransaction {
-        final Xid xid;
-        final int remainingTime;
-        final boolean outflowed;
-
-        ReceivedTransaction(Xid xid, int remainingTime, boolean outflowed) {
-            this.xid = xid;
-            this.remainingTime = remainingTime;
-            this.outflowed = outflowed;
-        }
-
-        public Xid getXid() {
-            return xid;
-        }
-
-        public int getRemainingTime() {
-            return remainingTime;
-        }
-
-        public boolean isOutflowed() {
-            return outflowed;
-        }
-    }
 }
