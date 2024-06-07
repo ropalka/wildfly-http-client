@@ -94,8 +94,15 @@ final class Serializer {
         }
     }
 
+    static void deserializeObjectArray(final ObjectInput in, final Object[] objects) throws IOException, ClassNotFoundException {
+        if (objects == null) return;
+        for (int i = 0; i < objects.length; i++) {
+            objects[i] = deserializeObject(in);
+        }
+    }
+
     static void serializeObjectArray(final ObjectOutput out, final Object[] objects) throws IOException {
-        if (objects == null || objects.length == 0) return;
+        if (objects == null) return;
         for (final Object object : objects) {
             out.writeObject(object);
         }

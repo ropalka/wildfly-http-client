@@ -21,7 +21,7 @@ package org.wildfly.httpclient.ejb;
 import static org.wildfly.httpclient.ejb.Constants.INVOCATION;
 import static org.wildfly.httpclient.ejb.Constants.JSESSIONID_COOKIE_NAME;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeMap;
-import static org.wildfly.httpclient.ejb.Serializer.deserializeObject;
+import static org.wildfly.httpclient.ejb.Serializer.deserializeObjectArray;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeTransaction;
 import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
 import static org.wildfly.httpclient.ejb.Serializer.serializeObject;
@@ -159,17 +159,15 @@ final class HttpInvocationHandler extends RemoteHTTPHandler {
 
                 @Override
                 public Resolved getRequestContent(final ClassLoader classLoader) throws IOException, ClassNotFoundException {
-                    Object[] methodParams = new Object[parameterTypeNames.length];
                     final Class<?> view = Class.forName(viewName, false, classLoader);
                     final HttpMarshallerFactory unmarshallingFactory = httpServiceConfig.getHttpUnmarshallerFactory(exchange);
                     final Unmarshaller unmarshaller = unmarshallingFactory.createUnmarshaller(new FilteringClassResolver(classLoader, classResolverFilter), HttpProtocolV1ObjectTable.INSTANCE);
 
                     try (InputStream inputStream = exchange.getInputStream()) {
                         unmarshaller.start(new InputStreamByteInput(inputStream));
-                        TransactionInfo txnInfo = deserializeTransaction(unmarshaller);
-                        for (int i = 0; i < parameterTypeNames.length; ++i) {
-                            methodParams[i] = deserializeObject(unmarshaller);
-                        }
+                        final TransactionInfo txnInfo = deserializeTransaction(unmarshaller);
+                        final Object[] methodParams = new Object[parameterTypeNames.length];
+                        deserializeObjectArray(unmarshaller, methodParams);
                         final Map<String, Object> contextData = deserializeMap(unmarshaller);
                         unmarshaller.finish();
 
