@@ -17,11 +17,17 @@
  */
 package org.wildfly.httpclient.ejb;
 
+import io.undertow.client.ClientResponse;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
+import org.xnio.IoUtils;
 
+import java.io.Closeable;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import static org.wildfly.httpclient.ejb.ByteOutputs.byteOutputOf;
 import static org.wildfly.httpclient.ejb.Serializer.serializeTransaction;
@@ -35,8 +41,31 @@ final class ClientHandlers {
         // forbidden instantiation
     }
 
+    static <T> HttpTargetContext.HttpResultHandler emptyResponseHandler(final CompletableFuture<T> result, final Function<ClientResponse, T> function) {
+        return new EmptyResponseHandler<T>(result, function);
+    }
+
     static HttpTargetContext.HttpMarshaller transactionRequestHandler(final Marshaller marshaller, final TransactionInfo txnInfo) {
         return new TransactionRequestHandler(marshaller, txnInfo);
+    }
+
+    private static final class EmptyResponseHandler<T> implements HttpTargetContext.HttpResultHandler {
+        private final CompletableFuture<T> result;
+        private final Function<ClientResponse, T> function;
+
+        private EmptyResponseHandler(final CompletableFuture<T> result, final Function<ClientResponse, T> function) {
+            this.result = result;
+            this.function = function;
+        }
+
+        @Override
+        public void handleResult(final InputStream httpBodyResponseStream, final ClientResponse httpResponse, final Closeable doneCallback) {
+            try {
+                result.complete(function != null ? function.apply(httpResponse) : null);
+            } finally {
+                IoUtils.safeClose(doneCallback);
+            }
+        }
     }
 
     private static final class TransactionRequestHandler implements HttpTargetContext.HttpMarshaller {

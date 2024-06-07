@@ -19,6 +19,7 @@
 package org.wildfly.httpclient.ejb;
 
 import static java.security.AccessController.doPrivileged;
+import static org.wildfly.httpclient.ejb.ClientHandlers.emptyResponseHandler;
 import static org.wildfly.httpclient.ejb.ClientHandlers.transactionRequestHandler;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_PORT;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_SCHEME;
@@ -361,14 +362,9 @@ class HttpEJBReceiver extends EJBReceiver {
                 .setVersion(targetContext.getProtocolVersion());
         final CompletableFuture<Boolean> result = new CompletableFuture<>();
         ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
-        targetContext.sendRequest(request, sslContext, authenticationConfiguration, null, (stream, response, closeable) -> {
-            try {
-                result.complete(true);
-                IoUtils.safeClose(stream);
-            } finally {
-                IoUtils.safeClose(closeable);
-            }
-        }, throwable -> result.complete(false), null, null);
+        targetContext.sendRequest(request, sslContext, authenticationConfiguration, null,
+                emptyResponseHandler(result, response -> result.complete(true)),
+                throwable -> result.complete(false), null, null);
         try {
             return result.get();
         } catch (InterruptedException | ExecutionException e) {
