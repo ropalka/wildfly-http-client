@@ -168,17 +168,6 @@ final class HttpInvocationHandler extends RemoteHTTPHandler {
                     try (InputStream inputStream = exchange.getInputStream()) {
                         unmarshaller.start(new InputStreamByteInput(inputStream));
                         TransactionInfo txnInfo = deserializeTransaction(unmarshaller);
-                        final Transaction transaction;
-                        if ((txnInfo.getType() == TransactionInfo.NULL_TRANSACTION) || localTransactionContext == null) { //the TX context may be null in unit tests
-                            transaction = null;
-                        } else {
-                            try {
-                                ImportResult<LocalTransaction> result = localTransactionContext.findOrImportTransaction(txnInfo.getXid(), txnInfo.getRemainingTime());
-                                transaction = result.getTransaction();
-                            } catch (XAException e) {
-                                throw new IllegalStateException(e); //TODO: what to do here?
-                            }
-                        }
                         for (int i = 0; i < parameterTypeNames.length; ++i) {
                             methodParams[i] = deserializeObject(unmarshaller);
                         }
@@ -199,6 +188,17 @@ final class HttpInvocationHandler extends RemoteHTTPHandler {
 
                         final HttpMarshallerFactory marshallerFactory = httpServiceConfig.getHttpMarshallerFactory(exchange);
                         final Marshaller marshaller = marshallerFactory.createMarshaller(new FilteringClassResolver(classLoader, classResolverFilter), HttpProtocolV1ObjectTable.INSTANCE);
+                        final Transaction transaction;
+                        if ((txnInfo.getType() == TransactionInfo.NULL_TRANSACTION) || localTransactionContext == null) { //the TX context may be null in unit tests
+                            transaction = null;
+                        } else {
+                            try {
+                                ImportResult<LocalTransaction> result = localTransactionContext.findOrImportTransaction(txnInfo.getXid(), txnInfo.getRemainingTime());
+                                transaction = result.getTransaction();
+                            } catch (XAException e) {
+                                throw new IllegalStateException(e); //TODO: what to do here?
+                            }
+                        }
                         return new ResolvedInvocation(contextData, methodParams, locator, exchange, marshaller, sessionAffinity, transaction, identifier);
                     } catch (IOException | ClassNotFoundException e) {
                         throw e;
