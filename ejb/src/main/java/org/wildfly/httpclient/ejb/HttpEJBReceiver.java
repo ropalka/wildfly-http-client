@@ -19,6 +19,7 @@
 package org.wildfly.httpclient.ejb;
 
 import static java.security.AccessController.doPrivileged;
+import static org.wildfly.httpclient.ejb.ClientHandlers.transactionRequestHandler;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_PORT;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_SCHEME;
 import static org.wildfly.httpclient.ejb.Constants.HTTP_PORT;
@@ -290,12 +291,9 @@ class HttpEJBReceiver extends EJBReceiver {
                 .setVersion(targetContext.getProtocolVersion());
         ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
         TransactionInfo transactionInfo = getTransactionInfo(ContextTransactionManager.getInstance().getTransaction(), targetContext.getUri());
-        targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
-                    Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
-                    marshaller.start(Marshalling.createByteOutput(output));
-                    serializeTransaction(marshaller, transactionInfo);
-                    marshaller.finish();
-                },
+        Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
+        targetContext.sendRequest(request, sslContext, authenticationConfiguration,
+                transactionRequestHandler(marshaller, transactionInfo),
                 ((unmarshaller, response, c) -> {
                     try {
                         String sessionId = response.getResponseHeaders().getFirst(Constants.EJB_SESSION_ID);
