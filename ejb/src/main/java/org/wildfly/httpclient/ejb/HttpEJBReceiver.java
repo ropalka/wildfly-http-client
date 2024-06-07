@@ -184,15 +184,15 @@ class HttpEJBReceiver extends EJBReceiver {
         final int defaultPort = uri.getScheme().equals(HTTPS_SCHEME) ? HTTPS_PORT : HTTP_PORT;
         final AuthenticationConfiguration authenticationConfiguration = client.getAuthenticationConfiguration(uri, context, defaultPort, "jndi", "jboss");
         final SSLContext sslContext = client.getSSLContext(uri, context, "jndi", "jboss");
+        Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
+        TransactionInfo transactionInfo = getTransactionInfo(clientInvocationContext.getTransaction(), targetContext.getUri());
         targetContext.sendRequest(request, sslContext, authenticationConfiguration, (output -> {
                     OutputStream data = output;
                     if (compressRequest) {
                         data = new GZIPOutputStream(data);
                     }
                     try {
-                        TransactionInfo transactionInfo = getTransactionInfo(clientInvocationContext.getTransaction(), targetContext.getUri());
                         try (ByteOutput byteOutput = Marshalling.createByteOutput(data)) {
-                            Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
                             marshaller.start(byteOutput);
                             serializeTransaction(marshaller, transactionInfo);
 
