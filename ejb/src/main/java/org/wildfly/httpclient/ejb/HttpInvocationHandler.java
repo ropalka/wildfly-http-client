@@ -159,7 +159,6 @@ final class HttpInvocationHandler extends RemoteHTTPHandler {
 
                 @Override
                 public Resolved getRequestContent(final ClassLoader classLoader) throws IOException, ClassNotFoundException {
-
                     Object[] methodParams = new Object[parameterTypeNames.length];
                     final Class<?> view = Class.forName(viewName, false, classLoader);
                     final HttpMarshallerFactory unmarshallingFactory = httpServiceConfig.getHttpUnmarshallerFactory(exchange);
@@ -172,10 +171,9 @@ final class HttpInvocationHandler extends RemoteHTTPHandler {
                             methodParams[i] = deserializeObject(unmarshaller);
                         }
                         final Map<String, Object> contextData = deserializeMap(unmarshaller);
-                        contextData.put(EJBClient.SOURCE_ADDRESS_KEY, exchange.getConnection().getPeerAddress());
-
                         unmarshaller.finish();
 
+                        contextData.put(EJBClient.SOURCE_ADDRESS_KEY, exchange.getConnection().getPeerAddress());
                         EJBLocator<?> locator;
                         if (EJBHome.class.isAssignableFrom(view)) {
                             locator = new EJBHomeLocator(view, app, module, bean, distinct, Affinity.LOCAL); //TODO: what is the correct affinity?
