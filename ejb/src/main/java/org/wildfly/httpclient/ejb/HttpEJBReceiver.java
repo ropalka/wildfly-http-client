@@ -190,7 +190,22 @@ class HttpEJBReceiver extends EJBReceiver {
                         data = new GZIPOutputStream(data);
                     }
                     try {
-                        marshalEJBRequest(Marshalling.createByteOutput(data), clientInvocationContext, targetContext, request);
+                        TransactionInfo transactionInfo = getTransactionInfo(clientInvocationContext.getTransaction(), targetContext.getUri());
+                        try (ByteOutput byteOutput = Marshalling.createByteOutput(data)) {
+                            Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
+                            marshaller.start(byteOutput);
+                            serializeTransaction(marshaller, transactionInfo);
+
+                            Object[] methodParams = clientInvocationContext.getParameters();
+                            if (methodParams != null && methodParams.length > 0) {
+                                for (final Object methodParam : methodParams) {
+                                    marshaller.writeObject(methodParam);
+                                }
+                            }
+                            final Map<String, Object> contextData = clientInvocationContext.getContextData();
+                            serializeMap(marshaller, contextData);
+                            marshaller.finish();
+                        }
                     } finally {
                         IoUtils.safeClose(data);
                     }
@@ -373,25 +388,6 @@ class HttpEJBReceiver extends EJBReceiver {
 
     private Unmarshaller createUnmarshaller(URI uri, HttpMarshallerFactory httpMarshallerFactory) throws IOException {
         return httpMarshallerFactory.createUnmarshaller(new HttpProtocolV1ObjectResolver(uri), HttpProtocolV1ObjectTable.INSTANCE);
-    }
-
-    private void marshalEJBRequest(ByteOutput byteOutput, EJBClientInvocationContext clientInvocationContext, HttpTargetContext targetContext, ClientRequest clientRequest) throws IOException, RollbackException, SystemException {
-        TransactionInfo transactionInfo = getTransactionInfo(clientInvocationContext.getTransaction(), targetContext.getUri());
-        try (byteOutput) {
-            Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(clientRequest));
-            marshaller.start(byteOutput);
-            serializeTransaction(marshaller, transactionInfo);
-
-            Object[] methodParams = clientInvocationContext.getParameters();
-            if (methodParams != null && methodParams.length > 0) {
-                for (final Object methodParam : methodParams) {
-                    marshaller.writeObject(methodParam);
-                }
-            }
-            final Map<String, Object> contextData = clientInvocationContext.getContextData();
-            serializeMap(marshaller, contextData);
-            marshaller.finish();
-        }
     }
 
     private TransactionInfo getTransactionInfo(final Transaction transaction, final URI uri) throws RollbackException, SystemException {
