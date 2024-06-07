@@ -94,6 +94,13 @@ final class Serializer {
         }
     }
 
+    static void serializeObjectArray(final ObjectOutput out, final Object[] objects) throws IOException {
+        if (objects == null || objects.length == 0) return;
+        for (final Object object : objects) {
+            out.writeObject(object);
+        }
+    }
+
     static Xid deserializeXid(final ObjectInput in) throws IOException {
         int formatId = in.readInt();
         int length = in.readInt();

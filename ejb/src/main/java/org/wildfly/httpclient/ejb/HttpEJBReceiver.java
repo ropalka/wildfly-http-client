@@ -26,6 +26,7 @@ import static org.wildfly.httpclient.ejb.Constants.HTTP_PORT;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeObject;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeMap;
 import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
+import static org.wildfly.httpclient.ejb.Serializer.serializeObjectArray;
 import static org.wildfly.httpclient.ejb.Serializer.serializeTransaction;
 import static org.wildfly.httpclient.ejb.TransactionInfo.localTransaction;
 import static org.wildfly.httpclient.ejb.TransactionInfo.nullTransaction;
@@ -195,15 +196,8 @@ class HttpEJBReceiver extends EJBReceiver {
                         try (ByteOutput byteOutput = Marshalling.createByteOutput(data)) {
                             marshaller.start(byteOutput);
                             serializeTransaction(marshaller, transactionInfo);
-
-                            Object[] methodParams = clientInvocationContext.getParameters();
-                            if (methodParams != null && methodParams.length > 0) {
-                                for (final Object methodParam : methodParams) {
-                                    marshaller.writeObject(methodParam);
-                                }
-                            }
-                            final Map<String, Object> contextData = clientInvocationContext.getContextData();
-                            serializeMap(marshaller, contextData);
+                            serializeObjectArray(marshaller, clientInvocationContext.getParameters());
+                            serializeMap(marshaller, clientInvocationContext.getContextData());
                             marshaller.finish();
                         }
                     } finally {
