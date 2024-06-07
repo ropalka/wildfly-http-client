@@ -70,7 +70,7 @@ final class Serializer {
     }
 
     static Map<String, Object> deserializeMap(final ObjectInput in) throws IOException, ClassNotFoundException {
-        final int contextDataSize = PackedInteger.readPackedInteger(in);
+        final int contextDataSize = deserializePackedInteger(in);
         if (contextDataSize == 0) {
             return new HashMap<>();
         }
@@ -87,7 +87,7 @@ final class Serializer {
 
     static void serializeMap(final ObjectOutput out, final Map<String, Object> contextData) throws IOException {
         int size = contextData != null ? contextData.size() : 0;
-        PackedInteger.writePackedInteger(out, size);
+        serializePackedInteger(out, size);
         if (size > 0) for (Map.Entry<String, Object> entry : contextData.entrySet()) {
             out.writeObject(entry.getKey());
             out.writeObject(entry.getValue());
@@ -150,6 +150,25 @@ final class Serializer {
         }
         if (transactionType == LOCAL_TRANSACTION) {
             out.writeInt(transaction.getRemainingTime());
+        }
+    }
+
+    static int deserializePackedInteger(final ObjectInput input) throws IOException {
+        int ret = input.readByte();
+        if ((ret & 0x80) == 0x80) {
+            return deserializePackedInteger(input) << 7 | (ret & 0x7F);
+        }
+        return ret;
+    }
+
+    static void serializePackedInteger(final ObjectOutput out, int value) throws IOException {
+        if (value < 0)
+            throw new IllegalArgumentException();
+        if (value > 127) {
+            out.writeByte(value & 0x7F | 0x80);
+            serializePackedInteger(out, value >> 7);
+        } else {
+            out.writeByte(value & 0xFF);
         }
     }
 }
