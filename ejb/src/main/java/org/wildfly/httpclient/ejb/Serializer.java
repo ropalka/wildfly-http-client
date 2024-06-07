@@ -75,12 +75,12 @@ final class Serializer {
             return new HashMap<>();
         }
         final Map<String, Object> ret = new HashMap<>(contextDataSize);
+        String key;
+        Object value;
         for (int i = 0; i < contextDataSize; i++) {
-            // read the key
-            final String key = (String) in.readObject();
-            // read the attachment value
-            final Object val = in.readObject();
-            ret.put(key, val);
+            key = (String) in.readObject();
+            value = in.readObject();
+            ret.put(key, value);
         }
         return ret;
     }
