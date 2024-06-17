@@ -24,6 +24,7 @@ import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
+import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
 import org.xnio.IoUtils;
@@ -32,12 +33,15 @@ import java.io.Closeable;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import static org.wildfly.httpclient.ejb.ByteOutputs.byteOutputOf;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeSet;
+import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
+import static org.wildfly.httpclient.ejb.Serializer.serializeObjectArray;
 import static org.wildfly.httpclient.ejb.Serializer.serializeTransaction;
 import static org.xnio.IoUtils.safeClose;
 
@@ -56,6 +60,10 @@ final class ClientHandlers {
 
     static <T> HttpTargetContext.HttpResultHandler emptyResponseHandler(final CompletableFuture<T> result, final Function<ClientResponse, T> function) {
         return new EmptyResponseHandler<T>(result, function);
+    }
+
+    static HttpTargetContext.HttpMarshaller startInvocationRequestHandler(final Marshaller marshaller, final TransactionInfo txnInfo, final Object[] parameters, final Map<String, Object> contextData) {
+        return new StartInvocationRequestHandler(marshaller, txnInfo, parameters, contextData);
     }
 
     static HttpTargetContext.HttpMarshaller transactionRequestHandler(final Marshaller marshaller, final TransactionInfo txnInfo) {
@@ -128,6 +136,31 @@ final class ClientHandlers {
                 result.complete(function != null ? function.apply(httpResponse) : null);
             } finally {
                 IoUtils.safeClose(doneCallback);
+            }
+        }
+    }
+
+    private static final class StartInvocationRequestHandler implements HttpTargetContext.HttpMarshaller {
+        private final Marshaller marshaller;
+        private final TransactionInfo txnInfo;
+        private final Object[] parameters;
+        private final Map<String, Object> contextData;
+
+        private StartInvocationRequestHandler(final Marshaller marshaller, final TransactionInfo txnInfo, final Object[] parameters, final Map<String, Object> contextData) {
+            this.marshaller = marshaller;
+            this.txnInfo = txnInfo;
+            this.parameters = parameters;
+            this.contextData = contextData;
+        }
+
+        @Override
+        public void marshall(final OutputStream httpBodyRequestStream) throws Exception {
+            try (ByteOutput out = Marshalling.createByteOutput(httpBodyRequestStream)) {
+                marshaller.start(out);
+                serializeTransaction(marshaller, txnInfo);
+                serializeObjectArray(marshaller, parameters);
+                serializeMap(marshaller, contextData);
+                marshaller.finish();
             }
         }
     }

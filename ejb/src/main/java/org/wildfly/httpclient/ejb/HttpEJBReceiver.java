@@ -22,15 +22,13 @@ import static java.security.AccessController.doPrivileged;
 import static org.wildfly.httpclient.ejb.ClientHandlers.cancelInvocationResponseFunction;
 import static org.wildfly.httpclient.ejb.ClientHandlers.ejbSessionIdResponseFunction;
 import static org.wildfly.httpclient.ejb.ClientHandlers.emptyResponseHandler;
+import static org.wildfly.httpclient.ejb.ClientHandlers.startInvocationRequestHandler;
 import static org.wildfly.httpclient.ejb.ClientHandlers.transactionRequestHandler;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_PORT;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_SCHEME;
 import static org.wildfly.httpclient.ejb.Constants.HTTP_PORT;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeObject;
 import static org.wildfly.httpclient.ejb.Serializer.deserializeMap;
-import static org.wildfly.httpclient.ejb.Serializer.serializeMap;
-import static org.wildfly.httpclient.ejb.Serializer.serializeObjectArray;
-import static org.wildfly.httpclient.ejb.Serializer.serializeTransaction;
 import static org.wildfly.httpclient.ejb.TransactionInfo.localTransaction;
 import static org.wildfly.httpclient.ejb.TransactionInfo.nullTransaction;
 import static org.wildfly.httpclient.ejb.TransactionInfo.remoteTransaction;
@@ -47,10 +45,8 @@ import org.jboss.ejb.client.EJBReceiverSessionCreationContext;
 import org.jboss.ejb.client.SessionID;
 import org.jboss.ejb.client.StatefulEJBLocator;
 import org.jboss.marshalling.ByteInput;
-import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
-import org.jboss.marshalling.Marshalling;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
 import org.wildfly.httpclient.common.HttpTargetContext;
@@ -188,18 +184,9 @@ class HttpEJBReceiver extends EJBReceiver {
         final SSLContext sslContext = client.getSSLContext(uri, context, "jndi", "jboss");
         Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
         TransactionInfo transactionInfo = getTransactionInfo(clientInvocationContext.getTransaction(), targetContext.getUri());
-        targetContext.sendRequest(request, sslContext, authenticationConfiguration, (output -> {
-                    try (ByteOutput byteOutput = Marshalling.createByteOutput(output)) {
-                        marshaller.start(byteOutput);
-                        serializeTransaction(marshaller, transactionInfo);
-                        serializeObjectArray(marshaller, clientInvocationContext.getParameters());
-                        serializeMap(marshaller, clientInvocationContext.getContextData());
-                        marshaller.finish();
-                    } finally {
-                        IoUtils.safeClose(output);
-                    }
-                }),
-
+        Object[] parameters = clientInvocationContext.getParameters();
+        Map<String, Object> contextData = clientInvocationContext.getContextData();
+        targetContext.sendRequest(request, sslContext, authenticationConfiguration, startInvocationRequestHandler(marshaller, transactionInfo, parameters, contextData),
                 ((input, response, closeable) -> {
                         if (response.getResponseCode() == StatusCodes.ACCEPTED && clientInvocationContext.getInvokedMethod().getReturnType() == void.class) {
                             ejbData.asyncMethods.add(clientInvocationContext.getInvokedMethod());
