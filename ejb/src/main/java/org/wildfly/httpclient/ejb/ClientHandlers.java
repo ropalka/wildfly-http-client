@@ -18,6 +18,7 @@
 package org.wildfly.httpclient.ejb;
 
 import io.undertow.client.ClientResponse;
+import org.jboss.ejb.client.SessionID;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
@@ -26,6 +27,7 @@ import org.xnio.IoUtils;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -47,6 +49,21 @@ final class ClientHandlers {
 
     static HttpTargetContext.HttpMarshaller transactionRequestHandler(final Marshaller marshaller, final TransactionInfo txnInfo) {
         return new TransactionRequestHandler(marshaller, txnInfo);
+    }
+
+    static Function<ClientResponse, SessionID> ejbSessionIdResponseHeaderHandler() {
+        return new EjbSessionIdResponseHeaderHandler();
+    }
+
+    private static final class EjbSessionIdResponseHeaderHandler implements Function<ClientResponse, SessionID> {
+        @Override
+        public SessionID apply(final ClientResponse clientResponse) {
+            final String sessionId = clientResponse.getResponseHeaders().getFirst(Constants.EJB_SESSION_ID);
+            if (sessionId != null) {
+                return SessionID.createSessionID(Base64.getUrlDecoder().decode(sessionId));
+            }
+            throw new IllegalStateException(EjbHttpClientMessages.MESSAGES.noSessionIdInResponse());
+        }
     }
 
     private static final class EmptyResponseHandler<T> implements HttpTargetContext.HttpResultHandler {

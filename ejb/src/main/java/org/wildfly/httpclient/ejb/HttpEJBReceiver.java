@@ -19,6 +19,7 @@
 package org.wildfly.httpclient.ejb;
 
 import static java.security.AccessController.doPrivileged;
+import static org.wildfly.httpclient.ejb.ClientHandlers.ejbSessionIdResponseHeaderHandler;
 import static org.wildfly.httpclient.ejb.ClientHandlers.emptyResponseHandler;
 import static org.wildfly.httpclient.ejb.ClientHandlers.transactionRequestHandler;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_PORT;
@@ -304,20 +305,8 @@ class HttpEJBReceiver extends EJBReceiver {
         Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
         targetContext.sendRequest(request, sslContext, authenticationConfiguration,
                 transactionRequestHandler(marshaller, transactionInfo),
-                ((unmarshaller, response, c) -> {
-                    try {
-                        String sessionId = response.getResponseHeaders().getFirst(Constants.EJB_SESSION_ID);
-                        if (sessionId == null) {
-                            result.completeExceptionally(EjbHttpClientMessages.MESSAGES.noSessionIdInResponse());
-                        } else {
-                            SessionID sessionID = SessionID.createSessionID(Base64.getUrlDecoder().decode(sessionId));
-                            result.complete(sessionID);
-                        }
-                    } finally {
-                        IoUtils.safeClose(c);
-                    }
-                })
-                , result::completeExceptionally, Constants.EJB_RESPONSE_NEW_SESSION, null);
+                emptyResponseHandler(result, ejbSessionIdResponseHeaderHandler()),
+                result::completeExceptionally, Constants.EJB_RESPONSE_NEW_SESSION, null);
 
         return result.get();
     }
