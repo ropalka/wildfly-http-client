@@ -51,7 +51,9 @@ import java.security.GeneralSecurityException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -156,33 +158,37 @@ public final class HttpEJBDiscoveryProvider implements DiscoveryProvider {
         final AuthenticationConfiguration authenticationConfiguration = client.getAuthenticationConfiguration(newUri, authenticationContext, -1, "ejb", "jboss");
         RequestBuilder builder = new RequestBuilder().setRequestType(RequestType.DISCOVER).setVersion(targetContext.getProtocolVersion());
         ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
+        CompletableFuture<Set<EJBModuleIdentifier>> result = new CompletableFuture<>();
         targetContext.sendRequest(request, sslContext, authenticationConfiguration, null,
-                ((result, response, closeable) -> {
+                ((inputStream, response, closeable) -> {
                     try {
                         final Unmarshaller unmarshaller = targetContext.getHttpMarshallerFactory(request).createUnmarshaller();
-                        final ByteInput in = new InputStreamByteInput(result);
+                        final ByteInput in = new InputStreamByteInput(inputStream);
                         Set<EJBModuleIdentifier> modules;
                         try (in) {
                             unmarshaller.start(in);
                             modules = deserializeSet(unmarshaller);
                             unmarshaller.finish();
                         }
-                        for (EJBModuleIdentifier ejbModuleIdentifier : modules) {
-                            ServiceURL url = createServiceURL(newUri, ejbModuleIdentifier);
-                            serviceURLCache.add(url);
-                        }
+                        result.complete(modules);
                     } catch (Exception e) {
                         EjbHttpClientMessages.MESSAGES.unableToPerformEjbDiscovery(e);
                     } finally {
-                        outstandingLatch.countDown();
                         IoUtils.safeClose(closeable);
                     }
                 }),
-                (e) -> {
-                    EjbHttpClientMessages.MESSAGES.unableToPerformEjbDiscovery(e);
-                    outstandingLatch.countDown();
-                },
-                Constants.EJB_DISCOVERY_RESPONSE, null);
+                result::completeExceptionally, Constants.EJB_DISCOVERY_RESPONSE, null);
+        try {
+            Set<EJBModuleIdentifier> modules = result.get();
+            for (EJBModuleIdentifier ejbModuleIdentifier : modules) {
+                ServiceURL url = createServiceURL(newUri, ejbModuleIdentifier);
+                serviceURLCache.add(url);
+            }
+        } catch (InterruptedException| ExecutionException e) {
+            result.completeExceptionally(e);
+        } finally {
+            outstandingLatch.countDown();
+        }
     }
 
     private ServiceURL createServiceURL(final URI newUri, final EJBModuleIdentifier moduleIdentifier) {
