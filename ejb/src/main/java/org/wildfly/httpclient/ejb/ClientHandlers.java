@@ -51,11 +51,22 @@ final class ClientHandlers {
         return new TransactionRequestHandler(marshaller, txnInfo);
     }
 
-    static Function<ClientResponse, SessionID> ejbSessionIdResponseHeaderHandler() {
-        return new EjbSessionIdResponseHeaderHandler();
+    static Function<ClientResponse, Boolean> cancelInvocationResponseFunction() {
+        return new CancelInvocationResponseFunction();
     }
 
-    private static final class EjbSessionIdResponseHeaderHandler implements Function<ClientResponse, SessionID> {
+    static Function<ClientResponse, SessionID> ejbSessionIdResponseFunction() {
+        return new EjbSessionIdResponseFunction();
+    }
+
+    private static final class CancelInvocationResponseFunction implements Function<ClientResponse, Boolean> {
+        @Override
+        public Boolean apply(final ClientResponse clientResponse) {
+            return true;
+        }
+    }
+
+    private static final class EjbSessionIdResponseFunction implements Function<ClientResponse, SessionID> {
         @Override
         public SessionID apply(final ClientResponse clientResponse) {
             final String sessionId = clientResponse.getResponseHeaders().getFirst(Constants.EJB_SESSION_ID);

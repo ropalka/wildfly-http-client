@@ -19,7 +19,8 @@
 package org.wildfly.httpclient.ejb;
 
 import static java.security.AccessController.doPrivileged;
-import static org.wildfly.httpclient.ejb.ClientHandlers.ejbSessionIdResponseHeaderHandler;
+import static org.wildfly.httpclient.ejb.ClientHandlers.cancelInvocationResponseFunction;
+import static org.wildfly.httpclient.ejb.ClientHandlers.ejbSessionIdResponseFunction;
 import static org.wildfly.httpclient.ejb.ClientHandlers.emptyResponseHandler;
 import static org.wildfly.httpclient.ejb.ClientHandlers.transactionRequestHandler;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_PORT;
@@ -305,7 +306,7 @@ class HttpEJBReceiver extends EJBReceiver {
         Marshaller marshaller = createMarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
         targetContext.sendRequest(request, sslContext, authenticationConfiguration,
                 transactionRequestHandler(marshaller, transactionInfo),
-                emptyResponseHandler(result, ejbSessionIdResponseHeaderHandler()),
+                emptyResponseHandler(result, ejbSessionIdResponseFunction()),
                 result::completeExceptionally, Constants.EJB_RESPONSE_NEW_SESSION, null);
 
         return result.get();
@@ -352,8 +353,8 @@ class HttpEJBReceiver extends EJBReceiver {
         final CompletableFuture<Boolean> result = new CompletableFuture<>();
         ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
         targetContext.sendRequest(request, sslContext, authenticationConfiguration, null,
-                emptyResponseHandler(result, response -> result.complete(true)),
-                throwable -> result.complete(false), null, null);
+                emptyResponseHandler(result, cancelInvocationResponseFunction()),
+                result::completeExceptionally, null, null);
         try {
             return result.get();
         } catch (InterruptedException | ExecutionException e) {
