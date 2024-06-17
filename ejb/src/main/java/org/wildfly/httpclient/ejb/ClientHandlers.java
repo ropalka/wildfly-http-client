@@ -18,9 +18,13 @@
 package org.wildfly.httpclient.ejb;
 
 import io.undertow.client.ClientResponse;
+import org.jboss.ejb.client.EJBModuleIdentifier;
 import org.jboss.ejb.client.SessionID;
+import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.ByteOutput;
+import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Marshaller;
+import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
 import org.xnio.IoUtils;
 
@@ -28,11 +32,14 @@ import java.io.Closeable;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Base64;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import static org.wildfly.httpclient.ejb.ByteOutputs.byteOutputOf;
+import static org.wildfly.httpclient.ejb.Serializer.deserializeSet;
 import static org.wildfly.httpclient.ejb.Serializer.serializeTransaction;
+import static org.xnio.IoUtils.safeClose;
 
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
@@ -41,6 +48,10 @@ final class ClientHandlers {
 
     private ClientHandlers() {
         // forbidden instantiation
+    }
+
+    static HttpTargetContext.HttpResultHandler discoveryResponseHandler(final Unmarshaller unmarshaller, final CompletableFuture<Set<EJBModuleIdentifier>> result) {
+        return new DiscoveryResponseHandler(unmarshaller, result);
     }
 
     static <T> HttpTargetContext.HttpResultHandler emptyResponseHandler(final CompletableFuture<T> result, final Function<ClientResponse, T> function) {
@@ -74,6 +85,31 @@ final class ClientHandlers {
                 return SessionID.createSessionID(Base64.getUrlDecoder().decode(sessionId));
             }
             throw new IllegalStateException(EjbHttpClientMessages.MESSAGES.noSessionIdInResponse());
+        }
+    }
+
+    private static final class DiscoveryResponseHandler implements HttpTargetContext.HttpResultHandler {
+        private final CompletableFuture<Set<EJBModuleIdentifier>> result;
+        private final Unmarshaller unmarshaller;
+
+        private DiscoveryResponseHandler(final Unmarshaller unmarshaller, final CompletableFuture<Set<EJBModuleIdentifier>> result) {
+            this.unmarshaller = unmarshaller;
+            this.result = result;
+        }
+
+        @Override
+        public void handleResult(final InputStream httpBodyResponseStream, final ClientResponse httpResponse, final Closeable doneCallback) {
+            try (ByteInput in = new InputStreamByteInput(httpBodyResponseStream)) {
+                Set<EJBModuleIdentifier> modules;
+                unmarshaller.start(in);
+                modules = deserializeSet(unmarshaller);
+                unmarshaller.finish();
+                result.complete(modules);
+            } catch (Exception e) {
+                result.completeExceptionally(e);
+            } finally {
+                safeClose(doneCallback);
+            }
         }
     }
 

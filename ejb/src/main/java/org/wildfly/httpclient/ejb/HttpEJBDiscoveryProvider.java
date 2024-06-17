@@ -21,14 +21,12 @@ import static java.security.AccessController.doPrivileged;
 import static org.jboss.ejb.client.EJBClientContext.getCurrent;
 import static org.wildfly.httpclient.ejb.Constants.HTTPS_SCHEME;
 import static org.wildfly.httpclient.ejb.Constants.HTTP_SCHEME;
-import static org.wildfly.httpclient.ejb.Serializer.deserializeSet;
+import static org.wildfly.httpclient.ejb.ClientHandlers.discoveryResponseHandler;
 
 import io.undertow.client.ClientRequest;
 import org.jboss.ejb.client.EJBClientConnection;
 import org.jboss.ejb.client.EJBClientContext;
 import org.jboss.ejb.client.EJBModuleIdentifier;
-import org.jboss.marshalling.ByteInput;
-import org.jboss.marshalling.InputStreamByteInput;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.discovery.AttributeValue;
 import org.wildfly.discovery.FilterSpec;
@@ -43,9 +41,9 @@ import org.wildfly.security.auth.client.AuthenticationConfiguration;
 import org.wildfly.security.auth.client.AuthenticationContext;
 import org.wildfly.security.auth.client.AuthenticationContextConfigurationClient;
 import org.wildfly.security.manager.WildFlySecurityManager;
-import org.xnio.IoUtils;
 
 import javax.net.ssl.SSLContext;
+import java.io.IOException;
 import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.util.HashSet;
@@ -159,24 +157,15 @@ public final class HttpEJBDiscoveryProvider implements DiscoveryProvider {
         RequestBuilder builder = new RequestBuilder().setRequestType(RequestType.DISCOVER).setVersion(targetContext.getProtocolVersion());
         ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
         CompletableFuture<Set<EJBModuleIdentifier>> result = new CompletableFuture<>();
+        Unmarshaller unmarshaller;
+        try {
+            unmarshaller = targetContext.getHttpMarshallerFactory(request).createUnmarshaller();
+        } catch (IOException e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+
         targetContext.sendRequest(request, sslContext, authenticationConfiguration, null,
-                ((inputStream, response, closeable) -> {
-                    try {
-                        final Unmarshaller unmarshaller = targetContext.getHttpMarshallerFactory(request).createUnmarshaller();
-                        final ByteInput in = new InputStreamByteInput(inputStream);
-                        Set<EJBModuleIdentifier> modules;
-                        try (in) {
-                            unmarshaller.start(in);
-                            modules = deserializeSet(unmarshaller);
-                            unmarshaller.finish();
-                        }
-                        result.complete(modules);
-                    } catch (Exception e) {
-                        EjbHttpClientMessages.MESSAGES.unableToPerformEjbDiscovery(e);
-                    } finally {
-                        IoUtils.safeClose(closeable);
-                    }
-                }),
+                discoveryResponseHandler(unmarshaller, result),
                 result::completeExceptionally, Constants.EJB_DISCOVERY_RESPONSE, null);
         try {
             Set<EJBModuleIdentifier> modules = result.get();
