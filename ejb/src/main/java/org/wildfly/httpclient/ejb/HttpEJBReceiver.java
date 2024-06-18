@@ -186,6 +186,7 @@ class HttpEJBReceiver extends EJBReceiver {
         TransactionInfo transactionInfo = getTransactionInfo(clientInvocationContext.getTransaction(), targetContext.getUri());
         Object[] parameters = clientInvocationContext.getParameters();
         Map<String, Object> contextData = clientInvocationContext.getContextData();
+        final Unmarshaller unmarshaller = createUnmarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
         targetContext.sendRequest(request, sslContext, authenticationConfiguration, startInvocationRequestHandler(marshaller, transactionInfo, parameters, contextData),
                 ((input, response, closeable) -> {
                         if (response.getResponseCode() == StatusCodes.ACCEPTED && clientInvocationContext.getInvokedMethod().getReturnType() == void.class) {
@@ -197,7 +198,6 @@ class HttpEJBReceiver extends EJBReceiver {
                                 Object returned;
                                 try {
                                     final Map<String, Object> attachments;
-                                    final Unmarshaller unmarshaller = createUnmarshaller(targetContext.getUri(), targetContext.getHttpMarshallerFactory(request));
                                     final ByteInput in = new InputStreamByteInput(input);
                                     try (in) {
                                         unmarshaller.start(in);
