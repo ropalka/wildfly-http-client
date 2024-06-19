@@ -24,7 +24,6 @@ import static org.wildfly.httpclient.transaction.Helper.xidRequestHandler;
 import io.undertow.client.ClientRequest;
 import org.jboss.marshalling.Marshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
-import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
 import org.wildfly.transaction.client.spi.SimpleTransactionControl;
 
