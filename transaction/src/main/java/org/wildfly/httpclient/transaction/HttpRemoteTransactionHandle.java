@@ -25,6 +25,7 @@ import io.undertow.client.ClientRequest;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
+import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
 import org.wildfly.transaction.client.spi.SimpleTransactionControl;
 import org.xnio.IoUtils;
@@ -87,7 +88,7 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
 
             targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
                 Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-                try (ByteOutput out = byteOutputOf(output)) {
+                try (ByteOutput out = new NoFlushByteOutput(byteOutputOf(output))) {
                     marshaller.start(out);
                     serializeXid(marshaller, id);
                     marshaller.finish();
@@ -150,7 +151,7 @@ class HttpRemoteTransactionHandle implements SimpleTransactionControl {
 
             targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
                 Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-                try (ByteOutput out = byteOutputOf(output)) {
+                try (ByteOutput out = new NoFlushByteOutput(byteOutputOf(output))) {
                     marshaller.start(out);
                     serializeXid(marshaller, id);
                     marshaller.finish();

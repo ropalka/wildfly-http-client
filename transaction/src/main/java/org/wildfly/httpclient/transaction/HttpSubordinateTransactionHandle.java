@@ -32,6 +32,7 @@ import io.undertow.client.ClientResponse;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
 import org.wildfly.httpclient.common.HttpTargetContext;
+import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.security.auth.client.AuthenticationConfiguration;
 import org.wildfly.transaction.client.spi.SubordinateTransactionControl;
 import org.xnio.IoUtils;
@@ -112,7 +113,7 @@ class HttpSubordinateTransactionHandle implements SubordinateTransactionControl 
         final ClientRequest request = builder.createRequest(targetContext.getUri().getPath());
         targetContext.sendRequest(request, sslContext, authenticationConfiguration, output -> {
             Marshaller marshaller = targetContext.getHttpMarshallerFactory(request).createMarshaller();
-            try (ByteOutput out = byteOutputOf(output)) {
+            try (ByteOutput out = new NoFlushByteOutput(byteOutputOf(output))) {
                 marshaller.start(out);
                 serializeXid(marshaller, id);
                 marshaller.finish();
