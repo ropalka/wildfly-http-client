@@ -116,7 +116,7 @@ final class ServerHandlers {
         @Override
         protected boolean isValidRequest(final HttpServerExchange exchange) {
             final ContentType contentType = ContentType.parse(exchange.getRequestHeaders().getFirst(CONTENT_TYPE));
-            if (contentType == null || contentType.getVersion() != 1 || !contentType.getType().equals(XID.getType())) {
+            if (!XID.equals(contentType)) {
                 exchange.setStatusCode(BAD_REQUEST);
                 HttpRemoteTransactionMessages.MESSAGES.debugf("Exchange %s has incorrect or missing content type", exchange);
                 return false;

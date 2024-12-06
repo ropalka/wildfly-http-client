@@ -159,7 +159,7 @@ final class ServerHandlers {
         protected boolean isValidRequest(final HttpServerExchange exchange) {
             String ct = exchange.getRequestHeaders().getFirst(CONTENT_TYPE);
             ContentType contentType = ContentType.parse(ct);
-            if (contentType == null || contentType.getVersion() != 1 || !INVOCATION.getType().equals(contentType.getType())) {
+            if (!INVOCATION.equals(contentType)) {
                 exchange.setStatusCode(BAD_REQUEST);
                 EjbHttpClientMessages.MESSAGES.debugf("Bad content type %s", ct);
                 return false;
@@ -537,7 +537,7 @@ final class ServerHandlers {
         protected boolean isValidRequest(HttpServerExchange exchange) {
             String ct = exchange.getRequestHeaders().getFirst(CONTENT_TYPE);
             ContentType contentType = ContentType.parse(ct);
-            if (contentType == null || contentType.getVersion() != 1 || !SESSION_OPEN.getType().equals(contentType.getType())) {
+            if (!SESSION_OPEN.equals(contentType)) {
                 exchange.setStatusCode(BAD_REQUEST);
                 EjbHttpClientMessages.MESSAGES.debugf("Bad content type %s", ct);
                 return false;

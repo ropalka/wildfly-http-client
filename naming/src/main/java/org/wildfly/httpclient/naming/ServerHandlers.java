@@ -285,7 +285,7 @@ final class ServerHandlers {
         @Override
         protected boolean isValidRequest(final HttpServerExchange exchange) {
             ContentType contentType = ContentType.parse(exchange.getRequestHeaders().getFirst(CONTENT_TYPE));
-            if (contentType == null || !contentType.getType().equals(VALUE.getType()) || contentType.getVersion() != 1) {
+            if (!VALUE.equals(contentType)) {
                 exchange.setStatusCode(BAD_REQUEST);
                 exchange.endExchange();
                 return false;
