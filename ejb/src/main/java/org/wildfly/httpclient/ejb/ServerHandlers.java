@@ -264,7 +264,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, config, StatusCodes.NOT_FOUND, EjbHttpClientMessages.MESSAGES.noSuchMethod());
+                        sendException(exchange, StatusCodes.NOT_FOUND, EjbHttpClientMessages.MESSAGES.noSuchMethod());
                     }
 
                     @Override
@@ -272,7 +272,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, config, StatusCodes.INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.sessionNotActive());
+                        sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.sessionNotActive());
                     }
 
                     @Override
@@ -280,7 +280,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, config, StatusCodes.NOT_FOUND, EjbHttpClientMessages.MESSAGES.wrongViewType());
+                        sendException(exchange, StatusCodes.NOT_FOUND, EjbHttpClientMessages.MESSAGES.wrongViewType());
                     }
 
                     @Override
@@ -313,7 +313,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, config, StatusCodes.INTERNAL_SERVER_ERROR, exception);
+                        sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, exception);
                     }
 
                     @Override
@@ -321,7 +321,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, config, StatusCodes.NOT_FOUND, new NoSuchEJBException());
+                        sendException(exchange, StatusCodes.NOT_FOUND, new NoSuchEJBException());
                     }
 
                     @Override
@@ -337,7 +337,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, config, StatusCodes.INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.notStateful());
+                        sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.notStateful());
                     }
 
                     @Override
@@ -423,7 +423,7 @@ final class ServerHandlers {
                     }
                     exchange.endExchange();
                 } catch (Exception e) {
-                    sendException(exchange, config, 500, e);
+                    sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, e);
                 }
             }
         }
@@ -564,7 +564,7 @@ final class ServerHandlers {
                         unmarshaller.finish();
                     }
                 } catch (Exception e) {
-                    sendException(exchange, config, StatusCodes.INTERNAL_SERVER_ERROR, e);
+                    sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, e);
                     return;
                 }
                 final Transaction transaction;
@@ -628,17 +628,17 @@ final class ServerHandlers {
 
                     @Override
                     public void writeException(@NotNull Exception exception) {
-                        sendException(exchange, config, StatusCodes.INTERNAL_SERVER_ERROR, exception);
+                        sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, exception);
                     }
 
                     @Override
                     public void writeNoSuchEJB() {
-                        sendException(exchange, config, StatusCodes.NOT_FOUND, new NoSuchEJBException());
+                        sendException(exchange, StatusCodes.NOT_FOUND, new NoSuchEJBException());
                     }
 
                     @Override
                     public void writeWrongViewType() {
-                        sendException(exchange, config, StatusCodes.NOT_FOUND, EjbHttpClientMessages.MESSAGES.wrongViewType());
+                        sendException(exchange, StatusCodes.NOT_FOUND, EjbHttpClientMessages.MESSAGES.wrongViewType());
                     }
 
                     @Override
@@ -648,7 +648,7 @@ final class ServerHandlers {
 
                     @Override
                     public void writeNotStateful() {
-                        sendException(exchange, config, StatusCodes.INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.notStateful());
+                        sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.notStateful());
                     }
 
                     @Override

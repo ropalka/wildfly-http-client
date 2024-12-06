@@ -141,7 +141,7 @@ final class ServerHandlers {
                     }
                 }
             } catch (Throwable e) {
-                sendException(exchange, config, StatusCodes.INTERNAL_SERVER_ERROR, e);
+                sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, e);
             }
         }
 
