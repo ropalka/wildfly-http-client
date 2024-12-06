@@ -20,7 +20,6 @@ package org.wildfly.httpclient.naming;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.wildfly.httpclient.common.ByteInputs.byteInputOf;
 import static org.wildfly.httpclient.common.ByteOutputs.byteOutputOf;
-import static org.wildfly.httpclient.common.HttpServerHelper.sendException;
 import static org.wildfly.httpclient.naming.Constants.NAME_PATH_PARAMETER;
 import static org.wildfly.httpclient.naming.Constants.NEW_QUERY_PARAMETER;
 import static org.wildfly.httpclient.naming.Constants.VALUE;
@@ -37,6 +36,7 @@ import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.ContextClassResolver;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
+import org.wildfly.httpclient.common.AbstractServerHttpHandler;
 import org.wildfly.httpclient.common.ContentType;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
 import org.wildfly.httpclient.common.HttpServiceConfig;
@@ -102,9 +102,8 @@ final class ServerHandlers {
         }
     }
 
-    private abstract static class AbstractNamingHandler implements HttpHandler {
+    private abstract static class AbstractNamingHandler extends AbstractServerHttpHandler {
         protected final Context ctx;
-        protected final HttpServiceConfig config;
         protected final Function<String, Boolean> classFilter;
 
         private AbstractNamingHandler(final HttpServiceConfig config, final Context ctx) {
@@ -112,9 +111,9 @@ final class ServerHandlers {
         }
 
         private AbstractNamingHandler(final HttpServiceConfig config, final Context ctx, final Function<String, Boolean> classFilter) {
+            super(config);
             this.ctx = ctx;
             this.classFilter = classFilter;
-            this.config = config;
         }
 
         @Override

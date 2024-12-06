@@ -19,7 +19,6 @@ package org.wildfly.httpclient.transaction;
 
 import static org.wildfly.httpclient.common.ByteInputs.byteInputOf;
 import static org.wildfly.httpclient.common.ByteOutputs.byteOutputOf;
-import static org.wildfly.httpclient.common.HttpServerHelper.sendException;
 import static org.wildfly.httpclient.transaction.Constants.NEW_TRANSACTION;
 import static org.wildfly.httpclient.transaction.Constants.RECOVERY_FLAGS;
 import static org.wildfly.httpclient.transaction.Constants.RECOVERY_PARENT_NAME;
@@ -38,6 +37,7 @@ import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.common.function.ExceptionBiFunction;
+import org.wildfly.httpclient.common.AbstractServerHttpHandler;
 import org.wildfly.httpclient.common.ContentType;
 import org.wildfly.httpclient.common.HttpMarshallerFactory;
 import org.wildfly.httpclient.common.HttpServiceConfig;
@@ -99,17 +99,16 @@ final class ServerHandlers {
 
     }
 
-    private abstract static class ValidatingTransactionHandler implements HttpHandler {
+    private abstract static class ValidatingTransactionHandler extends AbstractServerHttpHandler {
         protected final LocalTransactionContext ctx;
         protected final Function<LocalTransaction, Xid> xidResolver;
-        protected final HttpServiceConfig config;
 
         private ValidatingTransactionHandler(final HttpServiceConfig config, final LocalTransactionContext ctx) {
             this(config, ctx, null);
         }
 
         private ValidatingTransactionHandler(final HttpServiceConfig config, final LocalTransactionContext ctx, final Function<LocalTransaction, Xid> xidResolver) {
-            this.config = config;
+            super(config);
             this.ctx = ctx;
             this.xidResolver = xidResolver;
         }

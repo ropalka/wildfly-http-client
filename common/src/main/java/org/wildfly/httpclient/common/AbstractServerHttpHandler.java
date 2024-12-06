@@ -21,6 +21,7 @@ package org.wildfly.httpclient.common;
 import static org.wildfly.httpclient.common.ByteOutputs.byteOutputOf;
 import static org.wildfly.httpclient.common.HeadersHelper.putResponseHeader;
 
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import org.jboss.marshalling.ByteOutput;
@@ -31,13 +32,15 @@ import java.io.OutputStream;
 /**
  * @author Stuart Douglas
  */
-public class HttpServerHelper {
+public abstract class AbstractServerHttpHandler implements HttpHandler {
 
-    private HttpServerHelper() {
+    protected final HttpServiceConfig config;
 
+    protected AbstractServerHttpHandler(final HttpServiceConfig config) {
+        this.config = config;
     }
 
-    public static void sendException(HttpServerExchange exchange, HttpServiceConfig serviceConfig, int status, Throwable e) {
+    protected final void sendException(HttpServerExchange exchange, HttpServiceConfig serviceConfig, int status, Throwable e) {
         try {
             exchange.setStatusCode(status);
             putResponseHeader(exchange, Headers.CONTENT_TYPE, "application/x-wf-jbmar-exception;version=1");
