@@ -18,7 +18,6 @@
 package org.wildfly.httpclient.transaction;
 
 import static io.undertow.util.Headers.CONTENT_TYPE;
-import static io.undertow.util.StatusCodes.BAD_REQUEST;
 import static org.wildfly.httpclient.common.ByteInputs.byteInputOf;
 import static org.wildfly.httpclient.common.ByteOutputs.byteOutputOf;
 import static org.wildfly.httpclient.transaction.Constants.NEW_TRANSACTION;
@@ -32,6 +31,7 @@ import static org.wildfly.httpclient.transaction.Serializer.serializeXidArray;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HttpString;
 import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
@@ -114,14 +114,8 @@ final class ServerHandlers {
         }
 
         @Override
-        protected boolean isValidRequest(final HttpServerExchange exchange) {
-            final ContentType contentType = ContentType.parse(exchange.getRequestHeaders().getFirst(CONTENT_TYPE));
-            if (!XID.equals(contentType)) {
-                exchange.setStatusCode(BAD_REQUEST);
-                HttpRemoteTransactionMessages.MESSAGES.debugf("Exchange %s has incorrect or missing content type", exchange);
-                return false;
-            }
-            return true;
+        protected ContentType getExpectedContentType() {
+            return XID;
         }
 
         @Override
@@ -152,14 +146,8 @@ final class ServerHandlers {
         }
 
         @Override
-        protected boolean isValidRequest(final HttpServerExchange exchange) {
-            final String timeoutString = exchange.getRequestHeaders().getFirst(TIMEOUT);
-            if (timeoutString == null) {
-                exchange.setStatusCode(BAD_REQUEST);
-                HttpRemoteTransactionMessages.MESSAGES.debugf("Exchange %s is missing %s header", exchange, TIMEOUT);
-                return false;
-            }
-            return true;
+        protected HttpString[] getRequiredRequestHeaders() {
+            return new HttpString[] { TIMEOUT };
         }
 
         @Override
@@ -187,20 +175,8 @@ final class ServerHandlers {
         }
 
         @Override
-        protected boolean isValidRequest(final HttpServerExchange exchange) {
-            String flagsStringString = exchange.getRequestHeaders().getFirst(RECOVERY_FLAGS);
-            if (flagsStringString == null) {
-                exchange.setStatusCode(BAD_REQUEST);
-                HttpRemoteTransactionMessages.MESSAGES.debugf("Exchange %s is missing %s header", exchange, RECOVERY_FLAGS);
-                return false;
-            }
-            String parentName = exchange.getRequestHeaders().getFirst(RECOVERY_PARENT_NAME);
-            if (parentName == null) {
-                exchange.setStatusCode(BAD_REQUEST);
-                HttpRemoteTransactionMessages.MESSAGES.debugf("Exchange %s is missing %s header", exchange, RECOVERY_PARENT_NAME);
-                return false;
-            }
-            return true;
+        protected HttpString[] getRequiredRequestHeaders() {
+            return new HttpString[] { RECOVERY_FLAGS, RECOVERY_PARENT_NAME };
         }
 
         @Override

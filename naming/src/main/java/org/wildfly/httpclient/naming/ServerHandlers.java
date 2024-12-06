@@ -18,7 +18,6 @@
 package org.wildfly.httpclient.naming;
 
 import static io.undertow.util.Headers.CONTENT_TYPE;
-import static io.undertow.util.StatusCodes.BAD_REQUEST;
 import static io.undertow.util.StatusCodes.NO_CONTENT;
 import static io.undertow.util.StatusCodes.OK;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -210,14 +209,8 @@ final class ServerHandlers {
         }
 
         @Override
-        protected boolean isValidRequest(final HttpServerExchange exchange) {
-            Deque<String> newName = exchange.getQueryParameters().get(NEW_QUERY_PARAMETER);
-            if (newName == null || newName.isEmpty()) {
-                exchange.setStatusCode(BAD_REQUEST);
-                exchange.endExchange();
-                return false;
-            }
-            return true;
+        protected String[] getRequiredQueryParameters() {
+            return new String[] { NEW_QUERY_PARAMETER };
         }
 
         @Override
@@ -283,14 +276,8 @@ final class ServerHandlers {
         }
 
         @Override
-        protected boolean isValidRequest(final HttpServerExchange exchange) {
-            ContentType contentType = ContentType.parse(exchange.getRequestHeaders().getFirst(CONTENT_TYPE));
-            if (!VALUE.equals(contentType)) {
-                exchange.setStatusCode(BAD_REQUEST);
-                exchange.endExchange();
-                return false;
-            }
-            return true;
+        protected ContentType getExpectedContentType() {
+            return VALUE;
         }
 
         @Override

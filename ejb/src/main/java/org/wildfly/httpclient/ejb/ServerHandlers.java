@@ -156,15 +156,8 @@ final class ServerHandlers {
         }
 
         @Override
-        protected boolean isValidRequest(final HttpServerExchange exchange) {
-            String ct = exchange.getRequestHeaders().getFirst(CONTENT_TYPE);
-            ContentType contentType = ContentType.parse(ct);
-            if (!INVOCATION.equals(contentType)) {
-                exchange.setStatusCode(BAD_REQUEST);
-                EjbHttpClientMessages.MESSAGES.debugf("Bad content type %s", ct);
-                return false;
-            }
-            return true;
+        protected ContentType getExpectedContentType() {
+            return INVOCATION;
         }
 
         @Override
@@ -475,18 +468,6 @@ final class ServerHandlers {
         }
 
         @Override
-        protected boolean isValidRequest(HttpServerExchange exchange) {
-            String ct = exchange.getRequestHeaders().getFirst(CONTENT_TYPE);
-            ContentType contentType = ContentType.parse(ct);
-            if (contentType != null) {
-                exchange.setStatusCode(BAD_REQUEST);
-                EjbHttpClientMessages.MESSAGES.debugf("Bad content type %s", ct);
-                return false;
-            }
-            return true;
-        }
-
-        @Override
         protected void handleInternal(HttpServerExchange exchange) throws Exception {
             String relativePath = exchange.getRelativePath();
             if (relativePath.startsWith("/")) {
@@ -534,15 +515,8 @@ final class ServerHandlers {
         }
 
         @Override
-        protected boolean isValidRequest(HttpServerExchange exchange) {
-            String ct = exchange.getRequestHeaders().getFirst(CONTENT_TYPE);
-            ContentType contentType = ContentType.parse(ct);
-            if (!SESSION_OPEN.equals(contentType)) {
-                exchange.setStatusCode(BAD_REQUEST);
-                EjbHttpClientMessages.MESSAGES.debugf("Bad content type %s", ct);
-                return false;
-            }
-            return true;
+        protected ContentType getExpectedContentType() {
+            return SESSION_OPEN;
         }
 
         @Override
