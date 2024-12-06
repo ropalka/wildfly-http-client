@@ -17,6 +17,7 @@
  */
 package org.wildfly.httpclient.transaction;
 
+import static io.undertow.util.Headers.CONTENT_TYPE;
 import static io.undertow.util.StatusCodes.BAD_REQUEST;
 import static io.undertow.util.StatusCodes.INTERNAL_SERVER_ERROR;
 import static org.wildfly.httpclient.common.ByteInputs.byteInputOf;
@@ -32,7 +33,6 @@ import static org.wildfly.httpclient.transaction.Serializer.serializeXidArray;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
 import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
@@ -132,7 +132,7 @@ final class ServerHandlers {
 
         @Override
         protected boolean isValidRequest(final HttpServerExchange exchange) {
-            final ContentType contentType = ContentType.parse(exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE));
+            final ContentType contentType = ContentType.parse(exchange.getRequestHeaders().getFirst(CONTENT_TYPE));
             if (contentType == null || contentType.getVersion() != 1 || !contentType.getType().equals(XID.getType())) {
                 exchange.setStatusCode(BAD_REQUEST);
                 HttpRemoteTransactionMessages.MESSAGES.debugf("Exchange %s has incorrect or missing content type", exchange);
@@ -188,7 +188,7 @@ final class ServerHandlers {
             try {
                 final String timeoutString = exchange.getRequestHeaders().getFirst(TIMEOUT);
                 final Integer timeout = Integer.parseInt(timeoutString);
-                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, NEW_TRANSACTION.toString());
+                exchange.getResponseHeaders().put(CONTENT_TYPE, NEW_TRANSACTION.toString());
                 final LocalTransaction transaction = ctx.beginTransaction(timeout);
                 final Xid xid = xidResolver.apply(transaction);
 

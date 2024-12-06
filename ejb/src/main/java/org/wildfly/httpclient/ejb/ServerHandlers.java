@@ -17,6 +17,7 @@
  */
 package org.wildfly.httpclient.ejb;
 
+import static io.undertow.util.Headers.CONTENT_TYPE;
 import static io.undertow.util.StatusCodes.BAD_REQUEST;
 import static io.undertow.util.StatusCodes.INTERNAL_SERVER_ERROR;
 import static io.undertow.util.StatusCodes.NO_CONTENT;
@@ -43,7 +44,6 @@ import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.server.session.SessionIdGenerator;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.Headers;
 import jakarta.ejb.EJBHome;
 import jakarta.ejb.NoSuchEJBException;
 import jakarta.transaction.SystemException;
@@ -157,7 +157,7 @@ final class ServerHandlers {
 
         @Override
         protected void handleInternal(final HttpServerExchange exchange) throws Exception {
-            String ct = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+            String ct = exchange.getRequestHeaders().getFirst(CONTENT_TYPE);
             ContentType contentType = ContentType.parse(ct);
             if (contentType == null || contentType.getVersion() != 1 || !INVOCATION.getType().equals(contentType.getType())) {
                 exchange.setStatusCode(BAD_REQUEST);
@@ -414,7 +414,7 @@ final class ServerHandlers {
                     cancellationFlags.remove(identifier);
                 }
                 try {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, Constants.EJB_RESPONSE.toString());
+                    exchange.getResponseHeaders().put(CONTENT_TYPE, Constants.EJB_RESPONSE.toString());
     //                                    if (output.getSessionAffinity() != null) {
     //                                        exchange.setResponseCookie(new CookieImpl("JSESSIONID", output.getSessionAffinity()).setPath(WILDFLY_SERVICES));
     //                                    }
@@ -472,7 +472,7 @@ final class ServerHandlers {
 
         @Override
         protected void handleInternal(HttpServerExchange exchange) throws Exception {
-            String ct = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+            String ct = exchange.getRequestHeaders().getFirst(CONTENT_TYPE);
             ContentType contentType = ContentType.parse(ct);
             if (contentType != null) {
                 exchange.setStatusCode(BAD_REQUEST);
@@ -527,7 +527,7 @@ final class ServerHandlers {
 
         @Override
         protected void handleInternal(HttpServerExchange exchange) throws Exception {
-            String ct = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+            String ct = exchange.getRequestHeaders().getFirst(CONTENT_TYPE);
             ContentType contentType = ContentType.parse(ct);
             if (contentType == null || contentType.getVersion() != 1 || !SESSION_OPEN.getType().equals(contentType.getType())) {
                 exchange.setStatusCode(BAD_REQUEST);
@@ -667,7 +667,7 @@ final class ServerHandlers {
                             exchange.setResponseCookie(new CookieImpl(JSESSIONID_COOKIE_NAME, sessionIdGenerator.createSessionId()).setPath(rootPath));
                         }
 
-                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, EJB_RESPONSE_NEW_SESSION.toString());
+                        exchange.getResponseHeaders().put(CONTENT_TYPE, EJB_RESPONSE_NEW_SESSION.toString());
                         exchange.getResponseHeaders().put(EJB_SESSION_ID, Base64.getUrlEncoder().encodeToString(sessionId.getEncodedForm()));
 
                         exchange.setStatusCode(NO_CONTENT);
@@ -703,7 +703,7 @@ final class ServerHandlers {
 
         @Override
         protected void handleInternal(HttpServerExchange exchange) throws Exception {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, EJB_DISCOVERY_RESPONSE.toString());
+            exchange.getResponseHeaders().put(CONTENT_TYPE, EJB_DISCOVERY_RESPONSE.toString());
             byte[] data;
             final ByteArrayOutputStream out = new ByteArrayOutputStream();
             Marshaller marshaller = config.getHttpMarshallerFactory(exchange)

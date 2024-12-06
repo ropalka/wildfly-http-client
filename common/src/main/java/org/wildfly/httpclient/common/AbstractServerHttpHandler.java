@@ -18,12 +18,12 @@
 
 package org.wildfly.httpclient.common;
 
+import static io.undertow.util.Headers.CONTENT_TYPE;
 import static org.wildfly.httpclient.common.ByteOutputs.byteOutputOf;
 import static org.wildfly.httpclient.common.HeadersHelper.putResponseHeader;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.Marshaller;
 
@@ -43,7 +43,7 @@ public abstract class AbstractServerHttpHandler implements HttpHandler {
     protected final void sendException(final HttpServerExchange exchange, final int status, final Throwable e) {
         try {
             exchange.setStatusCode(status);
-            putResponseHeader(exchange, Headers.CONTENT_TYPE, "application/x-wf-jbmar-exception;version=1");
+            putResponseHeader(exchange, CONTENT_TYPE, "application/x-wf-jbmar-exception;version=1");
             final Marshaller marshaller = config.getHttpMarshallerFactory(exchange).createMarshaller();
             final OutputStream outputStream = exchange.getOutputStream();
             try (ByteOutput byteOutput = byteOutputOf(outputStream)) {
