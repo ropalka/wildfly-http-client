@@ -17,6 +17,10 @@
  */
 package org.wildfly.httpclient.naming;
 
+import static io.undertow.util.StatusCodes.BAD_REQUEST;
+import static io.undertow.util.StatusCodes.INTERNAL_SERVER_ERROR;
+import static io.undertow.util.StatusCodes.NO_CONTENT;
+import static io.undertow.util.StatusCodes.OK;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.wildfly.httpclient.common.ByteInputs.byteInputOf;
 import static org.wildfly.httpclient.common.ByteOutputs.byteOutputOf;
@@ -30,7 +34,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.PathTemplateMatch;
-import io.undertow.util.StatusCodes;
 import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.ByteOutput;
 import org.jboss.marshalling.ContextClassResolver;
@@ -126,9 +129,9 @@ final class ServerHandlers {
                     return;
                 }
                 if (result == null) {
-                    exchange.setStatusCode(StatusCodes.OK);
+                    exchange.setStatusCode(OK);
                 } else if (result instanceof Context) {
-                    exchange.setStatusCode(StatusCodes.NO_CONTENT);
+                    exchange.setStatusCode(NO_CONTENT);
                 } else {
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, VALUE.toString());
                     HttpNamingServerObjectResolver resolver = new HttpNamingServerObjectResolver(exchange);
@@ -141,7 +144,7 @@ final class ServerHandlers {
                     }
                 }
             } catch (Throwable e) {
-                sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, e);
+                sendException(exchange, INTERNAL_SERVER_ERROR, e);
             }
         }
 
@@ -214,7 +217,7 @@ final class ServerHandlers {
         protected Object doOperation(final HttpServerExchange exchange, final String name) throws NamingException {
             Deque<String> newName = exchange.getQueryParameters().get(NEW_QUERY_PARAMETER);
             if (newName == null || newName.isEmpty()) {
-                exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                exchange.setStatusCode(BAD_REQUEST);
                 exchange.endExchange();
                 return null;
             }
@@ -281,7 +284,7 @@ final class ServerHandlers {
         protected Object doOperation(final HttpServerExchange exchange, final String name) throws NamingException {
             ContentType contentType = ContentType.parse(exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE));
             if (contentType == null || !contentType.getType().equals(VALUE.getType()) || contentType.getVersion() != 1) {
-                exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                exchange.setStatusCode(BAD_REQUEST);
                 exchange.endExchange();
                 return null;
             }

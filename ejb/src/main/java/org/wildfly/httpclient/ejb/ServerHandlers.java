@@ -17,6 +17,10 @@
  */
 package org.wildfly.httpclient.ejb;
 
+import static io.undertow.util.StatusCodes.BAD_REQUEST;
+import static io.undertow.util.StatusCodes.INTERNAL_SERVER_ERROR;
+import static io.undertow.util.StatusCodes.NO_CONTENT;
+import static io.undertow.util.StatusCodes.NOT_FOUND;
 import static org.wildfly.httpclient.common.ByteInputs.byteInputOf;
 import static org.wildfly.httpclient.common.ByteOutputs.byteOutputOf;
 import static org.wildfly.httpclient.ejb.Constants.EJB_DISCOVERY_RESPONSE;
@@ -40,7 +44,6 @@ import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.server.session.SessionIdGenerator;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
-import io.undertow.util.StatusCodes;
 import jakarta.ejb.EJBHome;
 import jakarta.ejb.NoSuchEJBException;
 import jakarta.transaction.SystemException;
@@ -157,7 +160,7 @@ final class ServerHandlers {
             String ct = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             ContentType contentType = ContentType.parse(ct);
             if (contentType == null || contentType.getVersion() != 1 || !INVOCATION.getType().equals(contentType.getType())) {
-                exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                exchange.setStatusCode(BAD_REQUEST);
                 EjbHttpClientMessages.MESSAGES.debugf("Bad content type %s", ct);
                 return;
             }
@@ -168,7 +171,7 @@ final class ServerHandlers {
             }
             String[] parts = relativePath.split("/");
             if(parts.length < 7) {
-                exchange.setStatusCode(StatusCodes.NOT_FOUND);
+                exchange.setStatusCode(NOT_FOUND);
                 return;
             }
             final String app = handleDash(parts[0]);
@@ -264,7 +267,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, StatusCodes.NOT_FOUND, EjbHttpClientMessages.MESSAGES.noSuchMethod());
+                        sendException(exchange, NOT_FOUND, EjbHttpClientMessages.MESSAGES.noSuchMethod());
                     }
 
                     @Override
@@ -272,7 +275,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.sessionNotActive());
+                        sendException(exchange, INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.sessionNotActive());
                     }
 
                     @Override
@@ -280,7 +283,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, StatusCodes.NOT_FOUND, EjbHttpClientMessages.MESSAGES.wrongViewType());
+                        sendException(exchange, NOT_FOUND, EjbHttpClientMessages.MESSAGES.wrongViewType());
                     }
 
                     @Override
@@ -313,7 +316,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, exception);
+                        sendException(exchange, INTERNAL_SERVER_ERROR, exception);
                     }
 
                     @Override
@@ -321,7 +324,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, StatusCodes.NOT_FOUND, new NoSuchEJBException());
+                        sendException(exchange, NOT_FOUND, new NoSuchEJBException());
                     }
 
                     @Override
@@ -337,7 +340,7 @@ final class ServerHandlers {
                         if(identifier != null) {
                             cancellationFlags.remove(identifier);
                         }
-                        sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.notStateful());
+                        sendException(exchange, INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.notStateful());
                     }
 
                     @Override
@@ -423,7 +426,7 @@ final class ServerHandlers {
                     }
                     exchange.endExchange();
                 } catch (Exception e) {
-                    sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, e);
+                    sendException(exchange, INTERNAL_SERVER_ERROR, e);
                 }
             }
         }
@@ -472,7 +475,7 @@ final class ServerHandlers {
             String ct = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             ContentType contentType = ContentType.parse(ct);
             if (contentType != null) {
-                exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                exchange.setStatusCode(BAD_REQUEST);
                 EjbHttpClientMessages.MESSAGES.debugf("Bad content type %s", ct);
                 return;
             }
@@ -483,7 +486,7 @@ final class ServerHandlers {
             }
             String[] parts = relativePath.split("/");
             if (parts.length != 6) {
-                exchange.setStatusCode(StatusCodes.NOT_FOUND);
+                exchange.setStatusCode(NOT_FOUND);
                 return;
             }
             final String app = handleDash(parts[0]);
@@ -498,7 +501,7 @@ final class ServerHandlers {
             if (invocationId != null && sessionAffinity != null) {
                 identifier = new InvocationIdentifier(invocationId, sessionAffinity);
             } else {
-                exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                exchange.setStatusCode(BAD_REQUEST);
                 EjbHttpClientMessages.MESSAGES.debugf("Exchange %s did not include both session id and invocation id in cancel request", exchange);
                 return;
             }
@@ -527,7 +530,7 @@ final class ServerHandlers {
             String ct = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             ContentType contentType = ContentType.parse(ct);
             if (contentType == null || contentType.getVersion() != 1 || !SESSION_OPEN.getType().equals(contentType.getType())) {
-                exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                exchange.setStatusCode(BAD_REQUEST);
                 EjbHttpClientMessages.MESSAGES.debugf("Bad content type %s", ct);
                 return;
             }
@@ -537,7 +540,7 @@ final class ServerHandlers {
             }
             String[] parts = relativePath.split("/");
             if(parts.length != 4) {
-                exchange.setStatusCode(StatusCodes.NOT_FOUND);
+                exchange.setStatusCode(NOT_FOUND);
                 return;
             }
             final String app = handleDash(parts[0]);
@@ -564,7 +567,7 @@ final class ServerHandlers {
                         unmarshaller.finish();
                     }
                 } catch (Exception e) {
-                    sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, e);
+                    sendException(exchange, INTERNAL_SERVER_ERROR, e);
                     return;
                 }
                 final Transaction transaction;
@@ -628,17 +631,17 @@ final class ServerHandlers {
 
                     @Override
                     public void writeException(@NotNull Exception exception) {
-                        sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, exception);
+                        sendException(exchange, INTERNAL_SERVER_ERROR, exception);
                     }
 
                     @Override
                     public void writeNoSuchEJB() {
-                        sendException(exchange, StatusCodes.NOT_FOUND, new NoSuchEJBException());
+                        sendException(exchange, NOT_FOUND, new NoSuchEJBException());
                     }
 
                     @Override
                     public void writeWrongViewType() {
-                        sendException(exchange, StatusCodes.NOT_FOUND, EjbHttpClientMessages.MESSAGES.wrongViewType());
+                        sendException(exchange, NOT_FOUND, EjbHttpClientMessages.MESSAGES.wrongViewType());
                     }
 
                     @Override
@@ -648,7 +651,7 @@ final class ServerHandlers {
 
                     @Override
                     public void writeNotStateful() {
-                        sendException(exchange, StatusCodes.INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.notStateful());
+                        sendException(exchange, INTERNAL_SERVER_ERROR, EjbHttpClientMessages.MESSAGES.notStateful());
                     }
 
                     @Override
@@ -667,7 +670,7 @@ final class ServerHandlers {
                         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, EJB_RESPONSE_NEW_SESSION.toString());
                         exchange.getResponseHeaders().put(EJB_SESSION_ID, Base64.getUrlEncoder().encodeToString(sessionId.getEncodedForm()));
 
-                        exchange.setStatusCode(StatusCodes.NO_CONTENT);
+                        exchange.setStatusCode(NO_CONTENT);
                         exchange.endExchange();
                     }
 
