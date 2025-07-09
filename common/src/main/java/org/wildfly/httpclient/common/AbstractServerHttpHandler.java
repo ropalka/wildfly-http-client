@@ -47,6 +47,10 @@ public abstract class AbstractServerHttpHandler implements HttpHandler {
 
     protected abstract void processRequest(final HttpServerExchange exchange) throws Exception;
 
+    protected int getVersion() {
+        throw new UnsupportedOperationException();
+    }
+
     @Override
     public final void handleRequest(final HttpServerExchange exchange) {
         try {

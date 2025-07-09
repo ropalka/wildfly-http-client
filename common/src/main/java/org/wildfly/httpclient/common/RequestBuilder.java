@@ -38,7 +38,7 @@ public abstract class RequestBuilder<E extends Enum<? extends RequestType>> {
         return requestType;
     }
 
-    protected int getProtocolVersion() {
+    protected int getVersion() {
         return targetContext.getProtocolVersion();
     }
 
@@ -79,7 +79,7 @@ public abstract class RequestBuilder<E extends Enum<? extends RequestType>> {
     protected void appendOperationPath(final StringBuilder sb, final String contextPath) {
         sb.append(getPathPrefix());
         appendPath(sb, contextPath, false);
-        appendPath(sb, VERSION_PATH + getProtocolVersion(), false);
+        appendPath(sb, VERSION_PATH + getVersion(), false);
         appendPath(sb, ((RequestType) getRequestType()).getPath(), false);
     }
 

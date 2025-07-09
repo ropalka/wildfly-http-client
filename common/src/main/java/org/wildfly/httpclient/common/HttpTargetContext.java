@@ -494,7 +494,7 @@ public class HttpTargetContext extends AbstractAttachable {
     public interface RequestContext {
         OutputStream getRequestBody();
         String getRequestHeader(String headerName);
-        int getHandshakedVersion();
+        int getVersion();
     }
 
     private static class RequestContextImpl implements RequestContext {
@@ -523,7 +523,7 @@ public class HttpTargetContext extends AbstractAttachable {
         }
 
         @Override
-        public int getHandshakedVersion() {
+        public int getVersion() {
             return handshakedVersion;
         }
     }
@@ -532,7 +532,7 @@ public class HttpTargetContext extends AbstractAttachable {
         InputStream getResponseBody();
         String getResponseHeader(String headerName);
         int getResponseCode();
-        int getHandshakedVersion();
+        int getVersion();
     }
 
     private static class ResponseContextImpl implements ResponseContext {
@@ -566,7 +566,7 @@ public class HttpTargetContext extends AbstractAttachable {
         }
 
         @Override
-        public int getHandshakedVersion() {
+        public int getVersion() {
             return handshakedVersion;
         }
     }
