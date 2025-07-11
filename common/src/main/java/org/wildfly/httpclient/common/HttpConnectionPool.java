@@ -109,8 +109,8 @@ public class HttpConnectionPool implements Closeable {
         return new ClientConnectionHolder(connection, uri, sslContext);
     }
 
-    int getProtocolVersion() {
-        return Protocol.LATEST;
+    Version getVersion() {
+        return Version.LATEST;
     }
 
     private void runPending() {

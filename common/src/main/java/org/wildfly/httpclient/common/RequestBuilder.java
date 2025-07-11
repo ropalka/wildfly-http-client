@@ -38,8 +38,8 @@ public abstract class RequestBuilder<E extends Enum<? extends RequestType>> {
         return requestType;
     }
 
-    protected int getVersion() {
-        return targetContext.getProtocolVersion();
+    protected Version getVersion() {
+        return targetContext.getVersion();
     }
 
     protected String getPathPrefix() {
@@ -79,8 +79,15 @@ public abstract class RequestBuilder<E extends Enum<? extends RequestType>> {
     protected void appendOperationPath(final StringBuilder sb, final String contextPath) {
         sb.append(getPathPrefix());
         appendPath(sb, contextPath, false);
-        appendPath(sb, VERSION_PATH + getVersion(), false);
+        appendPath(sb, getVersionPath(), false);
         appendPath(sb, ((RequestType) getRequestType()).getPath(), false);
+    }
+
+    private String getVersionPath() {
+        final Version.Handler handlerVersion = getVersion().handler();
+        if (handlerVersion == Version.Handler.VERSION_1) return Protocol.VERSION_ONE_PATH;
+        if (handlerVersion == Version.Handler.VERSION_2) return Protocol.VERSION_TWO_PATH;
+        throw new IllegalStateException();
     }
 
 }

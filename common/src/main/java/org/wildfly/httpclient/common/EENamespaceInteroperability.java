@@ -142,15 +142,15 @@ final class EENamespaceInteroperability {
      */
 
     private static class HttpConnectionPool extends org.wildfly.httpclient.common.HttpConnectionPool {
-        private volatile int protocolVersion = -1;
+        private volatile Version version = null;
 
         protected HttpConnectionPool(int maxConnections, int maxStreamsPerConnection, XnioWorker worker, ByteBufferPool byteBufferPool, OptionMap options, HostPool hostPool, long connectionIdleTimeout) {
             super(maxConnections, maxStreamsPerConnection, worker, byteBufferPool, options, hostPool, connectionIdleTimeout);
         }
 
         @Override
-        int getProtocolVersion() {
-            return protocolVersion == -1? 1 : protocolVersion;
+        Version getVersion() {
+            return version == null ? Version.LEGACY : version;
         }
 
         @Override

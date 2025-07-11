@@ -133,8 +133,8 @@ public class HttpTargetContext extends AbstractAttachable {
      * Returns the protocol version to be used by this target context.
      * @return the protocol version
      */
-    public int getProtocolVersion() {
-        return connectionPool.getProtocolVersion();
+    public Version getVersion() {
+        return connectionPool.getVersion();
     }
 
     private void acquireAffinitiy(AuthenticationConfiguration authenticationConfiguration) {
@@ -285,13 +285,13 @@ public class HttpTargetContext extends AbstractAttachable {
                                             final InputStream in = new WildflyClientInputStream(result.getConnection().getBufferPool(), result.getResponseChannel(), doneCallback);
                                             if (response.getResponseCode() == NO_CONTENT) {
                                                 try {
-                                                    decoder.decode(ResponseContextImpl.of(InputStream.nullInputStream(), response, HttpTargetContext.this.getProtocolVersion()));
+                                                    decoder.decode(ResponseContextImpl.of(InputStream.nullInputStream(), response, HttpTargetContext.this.getVersion()));
                                                 } finally {
                                                     safeClose(in); // drain input
                                                 }
                                             } else {
                                                 final InputStream inputStream = identityOrGzipInputStream(response, in);
-                                                decoder.decode(ResponseContextImpl.of(inputStream, response, HttpTargetContext.this.getProtocolVersion())); // not wrapped with try-finally because we do not want to drain input (reason: some decoders are asynchronous)
+                                                decoder.decode(ResponseContextImpl.of(inputStream, response, HttpTargetContext.this.getVersion())); // not wrapped with try-finally because we do not want to drain input (reason: some decoders are asynchronous)
                                             }
                                         } else {
                                             final Closeable doneCallback = completionCallback(completedTask, connection);
@@ -315,7 +315,7 @@ public class HttpTargetContext extends AbstractAttachable {
                         //marshalling is blocking, we need to delegate, otherwise we may need to buffer arbitrarily large requests
                         connection.getConnection().getWorker().execute(() -> {
                             try (OutputStream outputStream = new WildflyClientOutputStream(result.getRequestChannel(), result.getConnection().getBufferPool())) {
-                                encoder.encode(RequestContextImpl.of(identityOrGzipOutputStream(request, outputStream), request, HttpTargetContext.this.getProtocolVersion()));
+                                encoder.encode(RequestContextImpl.of(identityOrGzipOutputStream(request, outputStream), request, HttpTargetContext.this.getVersion()));
                             } catch (Exception e) {
                                 HttpTargetContext.failed(connection, failureHandler, e);
                             }
@@ -494,21 +494,21 @@ public class HttpTargetContext extends AbstractAttachable {
     public interface RequestContext {
         OutputStream getRequestBody();
         String getRequestHeader(String headerName);
-        int getVersion();
+        Version getVersion();
     }
 
     private static class RequestContextImpl implements RequestContext {
         private final OutputStream os;
         private final ClientRequest request;
-        private final int handshakedVersion;
+        private final Version handshakedVersion;
 
-        private RequestContextImpl(final OutputStream os, final ClientRequest request, final int handshakedVersion) {
+        private RequestContextImpl(final OutputStream os, final ClientRequest request, final Version handshakedVersion) {
             this.os = os;
             this.request = request;
             this.handshakedVersion = handshakedVersion;
         }
 
-        private static RequestContext of(final OutputStream os, final ClientRequest request, final int handshakedVersion) {
+        private static RequestContext of(final OutputStream os, final ClientRequest request, final Version handshakedVersion) {
             return new RequestContextImpl(os, request, handshakedVersion);
         }
 
@@ -523,7 +523,7 @@ public class HttpTargetContext extends AbstractAttachable {
         }
 
         @Override
-        public int getVersion() {
+        public Version getVersion() {
             return handshakedVersion;
         }
     }
@@ -532,21 +532,21 @@ public class HttpTargetContext extends AbstractAttachable {
         InputStream getResponseBody();
         String getResponseHeader(String headerName);
         int getResponseCode();
-        int getVersion();
+        Version getVersion();
     }
 
     private static class ResponseContextImpl implements ResponseContext {
         private final InputStream is;
         private final ClientResponse response;
-        private final int handshakedVersion;
+        private final Version handshakedVersion;
 
-        private ResponseContextImpl(final InputStream is, final ClientResponse response, final int handshakedVersion) {
+        private ResponseContextImpl(final InputStream is, final ClientResponse response, final Version handshakedVersion) {
             this.is = is;
             this.response = response;
             this.handshakedVersion = handshakedVersion;
         }
 
-        private static ResponseContext of(final InputStream is, final ClientResponse response, final int handshakedVersion) {
+        private static ResponseContext of(final InputStream is, final ClientResponse response, final Version handshakedVersion) {
             return new ResponseContextImpl(is, response, handshakedVersion);
         }
 
@@ -566,7 +566,7 @@ public class HttpTargetContext extends AbstractAttachable {
         }
 
         @Override
-        public int getVersion() {
+        public Version getVersion() {
             return handshakedVersion;
         }
     }
