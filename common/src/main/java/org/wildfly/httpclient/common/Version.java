@@ -17,21 +17,47 @@
  */
 package org.wildfly.httpclient.common;
 
+import static org.wildfly.httpclient.common.HeadersHelper.getRequestHeader;
+import static java.lang.Integer.decode;
+
+import java.util.Objects;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HttpString;
+
 public final class Version {
 
-    protected static final Version LATEST = new Version(false, Handler.VERSION_2, Specification.JAKARTA_EE_9, Encoding.JBOSS_MARSHALLING);
-    protected static final Version LEGACY = new Version(true, Handler.VERSION_1, Specification.JAVA_EE_8, Encoding.JBOSS_MARSHALLING);
+    private static final HttpString PROTOCOL_VERSION = new HttpString("x-wf-version");
+    private static final int MASK_INTEROP  = 0b00000000_00000000_00000000_00000001;
+    private static final int MASK_HANDLER  = 0b00000000_00000000_00000000_01111110;
+    private static final int MASK_SPEC     = 0b00000000_00000000_00011111_10000000;
+    private static final int MASK_ENCODING = 0b00000000_00000000_11100000_00000000;
 
-    private final boolean requiresTransformation;
+    protected static final Version JAVA_EE_8 = new Version(true, Handler.VERSION_1, Specification.JAVA_EE_8, Encoding.JBOSS_MARSHALLING);
+    protected static final Version JAKARTA_EE_9 = new Version(false, Handler.VERSION_2, Specification.JAKARTA_EE_9, Encoding.JBOSS_MARSHALLING);
+    protected static final Version JAKARTA_EE_10 = new Version(false, Handler.VERSION_2, Specification.JAKARTA_EE_10, Encoding.JBOSS_MARSHALLING);
+    protected static final Version LATEST = JAKARTA_EE_10;
+
+    private final Boolean requiresTransformation;
     private final Handler handlerVersion;
-    private final Specification specificationVersion;
+    private final Specification specVersion;
     private final Encoding encodingVersion;
 
-    private Version(final boolean requiresTransformation, final Handler handlerVersion, final Specification specificationVersion, final Encoding encodingVersion) {
+    private Version(final boolean requiresTransformation, final Handler handlerVersion, final Specification specVersion, final Encoding encodingVersion) {
         this.requiresTransformation = requiresTransformation;
         this.handlerVersion = handlerVersion;
-        this.specificationVersion = specificationVersion;
+        this.specVersion = specVersion;
         this.encodingVersion = encodingVersion;
+    }
+
+    private static Version of(final int version) {
+        if (JAVA_EE_8.equals(version)) return JAVA_EE_8;
+        if (JAKARTA_EE_9.equals(version)) return JAKARTA_EE_9;
+        if (JAKARTA_EE_10.equals(version)) return JAKARTA_EE_10;
+        final Boolean requiresTransformation = (version & MASK_INTEROP) > 0;
+        final Handler handlerVersion = Handler.of((version & MASK_HANDLER) >>> 1);
+        final Specification specVersion = Specification.of((version & MASK_SPEC) >>> 7);
+        final Encoding encodingVersion = Encoding.of((version & MASK_ENCODING) >>> 13);
+        return new Version(requiresTransformation, handlerVersion, specVersion, encodingVersion);
     }
 
     public boolean requiresTransformation() {
@@ -43,11 +69,48 @@ public final class Version {
     }
 
     public Specification specitication() {
-        return specificationVersion;
+        return specVersion;
     }
 
     public Encoding encoding() {
         return encodingVersion;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (o == this) return true;
+        if (!(o instanceof Version)) return false;
+        final Version v = (Version)o;
+        return requiresTransformation.equals(v.requiresTransformation) &&
+               handlerVersion.equals(v.handlerVersion) &&
+               specVersion.equals(v.specVersion) &&
+               encodingVersion.equals(v.encodingVersion);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(requiresTransformation, handlerVersion, specVersion, encodingVersion);
+    }
+
+    public static Version readFrom(final HttpServerExchange exchange) {
+        final String versionHeader = getRequestHeader(exchange, PROTOCOL_VERSION);
+        final Version version = versionHeader == null ? JAVA_EE_8 : Version.of(decode(versionHeader));
+        if (version == JAVA_EE_8) {
+            // transformation is required for unmarshalling request and marshalling response,
+            // because server is interoperable mode and the lack of a header indicates this is
+            // either a Javax EE client or a Jakarta EE client that is not interoperable
+            // the latter case will lead to an error when unmarshalling at client side)
+            exchange.putAttachment(HTTP_MARSHALLER_FACTORY_KEY, INTEROPERABLE_MARSHALLER_FACTORY);
+            exchange.putAttachment(HTTP_UNMARSHALLER_FACTORY_KEY, INTEROPERABLE_MARSHALLER_FACTORY);
+        } else {
+
+        }
+        return version;
+    }
+
+    public void writeTo(final HttpServerExchange exchange) {
+        if (this.equals(JAVA_EE_8)) return;
+
     }
 
     public enum Handler {
@@ -59,19 +122,31 @@ public final class Version {
         private Handler(final int value) {
             this.value = value;
         }
+
+        private static Handler of(final int value) {
+            for (Handler handler : values()) {
+                if (value == handler.value) return handler;
+            }
+            throw new IllegalArgumentException("Unsupported Handler Version");
+        }
     }
 
     public enum Specification {
         JAVA_EE_8(-1),
         JAKARTA_EE_9(0),
-        JAKARTA_EE_9_1(1),
-        JAKARTA_EE_10(2),
-        JAKARTA_EE_11(3);
+        JAKARTA_EE_10(1);
 
         private final int value;
 
         private Specification(final int value) {
             this.value = value;
+        }
+
+        private static Specification of(final int value) {
+            for (Specification spec : values()) {
+                if (value == spec.value) return spec;
+            }
+            throw new IllegalArgumentException("Unsupported Specification Version");
         }
     }
 
@@ -82,6 +157,13 @@ public final class Version {
 
         private Encoding(final int value) {
             this.value = value;
+        }
+
+        private static Encoding of(final int value) {
+            for (Encoding encoding : values()) {
+                if (value == encoding.value) return encoding;
+            }
+            throw new IllegalArgumentException("Unsupported Encoding Version");
         }
     }
 

@@ -40,6 +40,7 @@ import java.util.Deque;
 public abstract class AbstractServerHttpHandler implements HttpHandler {
 
     protected final HttpServiceConfig config;
+    private volatile Version version;
 
     protected AbstractServerHttpHandler(final HttpServiceConfig config) {
         this.config = config;
@@ -47,17 +48,19 @@ public abstract class AbstractServerHttpHandler implements HttpHandler {
 
     protected abstract void processRequest(final HttpServerExchange exchange) throws Exception;
 
-    protected int getVersion() {
-        throw new UnsupportedOperationException();
+    protected Version getVersion() {
+        return version;
     }
 
     @Override
     public final void handleRequest(final HttpServerExchange exchange) {
         try {
+            version = Version.readFrom(exchange);
             if (!containsRequiredContentType(exchange)) return;
             if (!containsRequiredRequestHeaders(exchange)) return;
             if (!containsRequiredQueryParameters(exchange)) return;
             processRequest(exchange);
+            version.writeTo(exchange); // TODO: we need to do decision between client and our protocol - client is preferred???
         } catch (Throwable e) {
             sendException(exchange, INTERNAL_SERVER_ERROR, e);
         }
