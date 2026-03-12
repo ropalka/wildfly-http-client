@@ -32,15 +32,17 @@ import java.util.Hashtable;
  */
 public class EJBRemoteIT {
 
-    private static final String DEFAULT_SERVER_HOST = "http://localhost:8080";
+    private static boolean USE_REMOTING = Boolean.getBoolean("remoting.over.http");
+    private static final String REMOTING_SERVER_HOST = "remote+http://localhost:8080";
+    private static final String WFHTTP_SERVER_HOST = "http://localhost:8080/wildfly-services";
 
     private String getProviderURl() {
         final String serverHost = System.getProperty("server.host");
-        return "remote+" + (serverHost != null ? serverHost : DEFAULT_SERVER_HOST);
+        return serverHost != null ? serverHost : USE_REMOTING ? REMOTING_SERVER_HOST : WFHTTP_SERVER_HOST;
     }
 
     private String getEJBBaseJndiName() {
-        return "ejb:/ejb-remote";
+        return (USE_REMOTING ? "ejb:" : "java:") + "/ejb-remote";
     }
 
     @Test
