@@ -1,0 +1,19 @@
+# Setup server location
+export JBOSS_HOME=...
+
+# Create user on server
+cd $JBOSS_HOME/bin
+./add-user.sh -a -u 'quickstartUser' -p 'quickstartPwd1!'
+
+# Start server
+cd $JBOSS_HOME/bin
+./standalone.sh
+
+# Build application
+mvn clean install
+
+# Deploy application
+cp target/ejb-remote.war $JBOSS_HOME/standalone/deployments
+
+# Run application
+/bin/bash execute.sh
