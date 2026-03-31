@@ -16,6 +16,8 @@
  */
 package org.jboss.as.quickstarts.ejb.remote.stateless;
 
+import javax.servlet.Servlet;
+
 /**
  * @author Jaikiran Pai
  */
@@ -24,4 +26,6 @@ public interface RemoteCalculator {
     int add(int a, int b);
 
     int subtract(int a, int b);
+
+    Class<Servlet> getBoundValue();
 }

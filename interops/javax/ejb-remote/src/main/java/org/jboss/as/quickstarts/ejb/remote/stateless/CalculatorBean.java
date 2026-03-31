@@ -18,6 +18,8 @@ package org.jboss.as.quickstarts.ejb.remote.stateless;
 
 import javax.ejb.Remote;
 import javax.ejb.Stateless;
+import javax.servlet.Servlet;
+import javax.naming.InitialContext;
 
 /**
  * @author Jaikiran Pai
@@ -34,5 +36,14 @@ public class CalculatorBean implements RemoteCalculator {
     @Override
     public int subtract(int a, int b) {
         return a - b;
+    }
+
+    public Class<Servlet> getBoundValue() {
+        try {
+            InitialContext ctx = new InitialContext();
+            return (Class<Servlet>) ctx.lookup(JndiBean.JNDI_NAME);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
