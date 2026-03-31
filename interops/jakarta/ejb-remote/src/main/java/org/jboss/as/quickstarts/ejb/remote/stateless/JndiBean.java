@@ -16,34 +16,31 @@
  */
 package org.jboss.as.quickstarts.ejb.remote.stateless;
 
-import jakarta.ejb.Remote;
-import jakarta.ejb.Stateless;
+import jakarta.annotation.PostConstruct;
+import jakarta.ejb.Singleton;
+import jakarta.ejb.Startup;
 import jakarta.servlet.Servlet;
 import javax.naming.InitialContext;
 
-/**
- * @author Jaikiran Pai
- */
-@Stateless
-@Remote(RemoteCalculator.class)
-public class CalculatorBean implements RemoteCalculator {
+@Singleton
+@Startup
+public class JndiBean {
 
-    @Override
-    public int add(int a, int b) {
-        return a + b;
-    }
+    static final String JNDI_NAME = "java:global/test/ServletClass";
+    private volatile InitialContext ctx;
 
-    @Override
-    public int subtract(int a, int b) {
-        return a - b;
-    }
-
-    public Class<Servlet> getBoundValue() {
+    @PostConstruct
+    public void init() {
         try {
-            InitialContext ctx = new InitialContext();
-            return (Class<Servlet>) ctx.lookup(JndiBean.JNDI_NAME);
+            ctx = new InitialContext();
+
+            ctx.bind(JNDI_NAME, Servlet.class);
+
+            System.out.println("Bound JNDI value: " + JNDI_NAME);
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
+
 }

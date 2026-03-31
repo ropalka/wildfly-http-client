@@ -47,6 +47,7 @@
         <junit.version>4.13.2</junit.version>
         <jakarta.annotation.api.version>2.1.1</jakarta.annotation.api.version>
         <jakarta.ejb.api.version>4.0.1</jakarta.ejb.api.version>
+        <jakarta.servlet.api.version>6.0.0</jakarta.servlet.api.version>
     </properties>
 
     <dependencies>
@@ -60,6 +61,12 @@
             <groupId>jakarta.ejb</groupId>
             <artifactId>jakarta.ejb-api</artifactId>
             <version>${jakarta.ejb.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>${jakarta.servlet.api.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -99,6 +106,13 @@
                                     <version>${junit.version}</version>
                                     <outputDirectory>${project.build.directory}/libs</outputDirectory>
                                     <destFileName>junit.jar</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>jakarta.servlet</groupId>
+                                    <artifactId>jakarta.servlet-api</artifactId>
+                                    <version>${jakarta.servlet.api.version}</version>
+                                    <outputDirectory>${project.build.directory}/libs</outputDirectory>
+                                    <destFileName>jakarta-servlet-api.jar</destFileName>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>

@@ -6,6 +6,7 @@ if [ -z "${JBOSS_HOME}" ]; then
 fi
 
 CP="${CP}:$JBOSS_HOME/bin/client/jboss-client.jar"
+CP="${CP}:target/libs/javax-servlet-api.jar"
 CP="${CP}:target/libs/hamcrest-core.jar"
 CP="${CP}:target/libs/junit.jar"
 CP="${CP}:target/test-classes"

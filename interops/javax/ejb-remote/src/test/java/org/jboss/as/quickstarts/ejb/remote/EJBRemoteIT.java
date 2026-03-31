@@ -23,6 +23,9 @@ import org.junit.Test;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+
+import javax.servlet.Servlet;
+
 import java.util.Hashtable;
 
 /**
@@ -86,6 +89,9 @@ public class EJBRemoteIT {
         int difference = statelessRemoteCalculator.subtract(num1, num2);
         System.out.println("Remote calculator returned difference = " + difference);
         Assert.assertEquals("Unexpected remote stateless calculator difference", (num1 - num2), difference);
+        Class<Servlet> servletClass = statelessRemoteCalculator.getBoundValue();
+        System.out.println("Remote calculator returned servlet class = " + servletClass);
+        Assert.assertEquals("Unexpected class instance", servletClass, Servlet.class);
         context.close();
     }
 
