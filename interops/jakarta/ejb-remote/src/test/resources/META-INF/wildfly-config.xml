@@ -19,6 +19,11 @@
   -->
 
 <configuration>
+    <http-client xmlns="urn:wildfly-http-client:1.2">
+        <defaults>
+            <version handler-version="2" specification-version="10"/>
+        </defaults>
+    </http-client>
     <authentication-client xmlns="urn:elytron:1.0">
         <authentication-rules>
                     <rule use-configuration="default" />
