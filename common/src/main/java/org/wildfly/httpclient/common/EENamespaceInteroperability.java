@@ -17,40 +17,20 @@
  */
 package org.wildfly.httpclient.common;
 
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientExchange;
-import io.undertow.client.ClientRequest;
-import io.undertow.client.ClientResponse;
-import io.undertow.client.ContinueNotification;
-import io.undertow.client.PushCallback;
-import io.undertow.connector.ByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.AttachmentList;
 import io.undertow.util.HttpString;
 import org.wildfly.security.manager.WildFlySecurityManager;
-import org.xnio.OptionMap;
-import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-
-import javax.net.ssl.SSLContext;
-import java.io.IOException;
-import java.net.URI;
-import java.util.List;
 
 import static org.wildfly.httpclient.common.HeadersHelper.addResponseHeader;
 import static org.wildfly.httpclient.common.HeadersHelper.getRequestHeader;
-import static org.wildfly.httpclient.common.HeadersHelper.putRequestHeader;
 import static org.wildfly.httpclient.common.HttpMarshallerFactory.DEFAULT_FACTORY;
 import static org.wildfly.httpclient.common.HttpMarshallerFactory.INTEROPERABLE_FACTORY;
 import static org.wildfly.httpclient.common.Protocol.VERSION_ONE_PATH;
 import static org.wildfly.httpclient.common.Protocol.VERSION_TWO_PATH;
-import static org.wildfly.httpclient.common.Version.JAVA_EE_8;
 
 /**
  * EE namespace interoperability implementation for allowing Jakarta EE namespace servers and clients communication with
@@ -133,156 +113,6 @@ final class EENamespaceInteroperability {
      */
     static HttpConnectionPoolFactory getHttpConnectionPoolFactory() {
         return (HttpConnectionPool::new);
-    }
-
-    /*
-    Client side EE namespace interoperability
-     */
-
-    private static class HttpConnectionPool extends org.wildfly.httpclient.common.HttpConnectionPool {
-        protected HttpConnectionPool(int maxConnections, int maxStreamsPerConnection, XnioWorker worker, ByteBufferPool byteBufferPool, OptionMap options, HostPool hostPool, long connectionIdleTimeout, Version version) {
-            super(maxConnections, maxStreamsPerConnection, worker, byteBufferPool, options, hostPool, connectionIdleTimeout, version);
-        }
-
-        @Override
-        protected org.wildfly.httpclient.common.HttpConnectionPool.ClientConnectionHolder createClientConnectionHolder(ClientConnection connection, URI uri, SSLContext sslContext) {
-            return new ClientConnectionHolder(connection, uri, sslContext);
-        }
-
-        protected class ClientConnectionHolder extends org.wildfly.httpclient.common.HttpConnectionPool.ClientConnectionHolder {
-
-            private ClientConnectionHolder(ClientConnection connection, URI uri, SSLContext sslContext) {
-                super (connection, uri, sslContext);
-            }
-
-            @Override
-            public void sendRequest(ClientRequest request, ClientCallback<ClientExchange> callback) {
-                if (getVersion() == JAVA_EE_8) {
-                    // connection is Java EE, so we need to transform class names Javax<->Jakarta
-                    request.putAttachment(HTTP_MARSHALLER_FACTORY_KEY, INTEROPERABLE_FACTORY);
-                } else {
-                    // connection set as Jakarta EE - no transformation needed
-                    putRequestHeader(request, PROTOCOL_VERSION, getVersion().toString());
-                    request.putAttachment(HTTP_MARSHALLER_FACTORY_KEY, DEFAULT_FACTORY);
-                }
-                super.sendRequest(request, new ClientCallback<ClientExchange>() {
-                    @Override
-                    public void completed(ClientExchange result) {
-                        // wrap the exchange, to handle interoperability at the result (see below)
-                        callback.completed(new EEInteroperableClientExchange(result));
-                    }
-
-                    @Override
-                    public void failed(IOException e) {
-                        callback.failed(e);
-                    }
-                });
-            }
-
-            private final class EEInteroperableClientExchange implements ClientExchange {
-
-                private final ClientExchange wrappedExchange;
-                private volatile Version version;
-
-                public EEInteroperableClientExchange(ClientExchange clientExchange) {
-                    this.wrappedExchange = clientExchange;
-                }
-
-                @Override
-                public void setResponseListener(final ClientCallback<ClientExchange> responseListener) {
-                    wrappedExchange.setResponseListener(new ClientCallback<ClientExchange>() {
-                        @Override
-                        public void completed(ClientExchange result) {
-                            // this method adds the factory to the request instead of response, this is more efficient
-                            // we prevent adding when jakartaEE is already true and creating a new entry in the response attachment map
-                            if (version == null) {
-                                version = Version.readFrom(result);
-                                result.putAttachment(Version.KEY, version);
-                                // we need to check for protocol version header to define the protocol version of the pool
-                                if (version == Version.JAVA_EE_8) {
-                                    // regarding marshalling factory key, do nothing, the connection is
-                                    // not Jakarta and the marshalling factory provider is already interoperable
-                                } else {
-                                    // overwrite previous attachment, no transformation is needed for this connection any more
-                                    result.getRequest().putAttachment(HTTP_MARSHALLER_FACTORY_KEY, DEFAULT_FACTORY);
-                                }
-                            } // else: do nothing, request already contains the default marshalling factory
-                            responseListener.completed(result);
-                        }
-
-                        @Override
-                        public void failed(IOException e) {
-                            responseListener.failed(e);
-                        }
-                    });
-                }
-
-                @Override
-                public void setContinueHandler(ContinueNotification continueHandler) {
-                    wrappedExchange.setContinueHandler(continueHandler);
-                }
-
-                @Override
-                public void setPushHandler(PushCallback pushCallback) {
-                    wrappedExchange.setPushHandler(pushCallback);
-                }
-
-                @Override
-                public StreamSinkChannel getRequestChannel() {
-                    return wrappedExchange.getRequestChannel();
-                }
-
-                @Override
-                public StreamSourceChannel getResponseChannel() {
-                    return wrappedExchange.getResponseChannel();
-                }
-
-                @Override
-                public ClientRequest getRequest() {
-                    return wrappedExchange.getRequest();
-                }
-
-                @Override
-                public ClientResponse getResponse() {
-                    return wrappedExchange.getResponse();
-                }
-
-                @Override
-                public ClientResponse getContinueResponse() {
-                    return wrappedExchange.getContinueResponse();
-                }
-
-                @Override
-                public ClientConnection getConnection() {
-                    return wrappedExchange.getConnection();
-                }
-
-                @Override
-                public <T> T getAttachment(AttachmentKey<T> key) {
-                    return wrappedExchange.getAttachment(key);
-                }
-
-                @Override
-                public <T> List<T> getAttachmentList(AttachmentKey<? extends List<T>> key) {
-                    return wrappedExchange.getAttachmentList(key);
-                }
-
-                @Override
-                public <T> T putAttachment(AttachmentKey<T> key, T value) {
-                    return wrappedExchange.putAttachment(key, value);
-                }
-
-                @Override
-                public <T> T removeAttachment(AttachmentKey<T> key) {
-                    return wrappedExchange.removeAttachment(key);
-                }
-
-                @Override
-                public <T> void addToAttachmentList(AttachmentKey<AttachmentList<T>> key, T value) {
-                    wrappedExchange.addToAttachmentList(key, value);
-                }
-            }
-        }
     }
 
     /*
