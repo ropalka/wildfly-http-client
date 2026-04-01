@@ -13,6 +13,6 @@ CP="${CP}:target/test-classes"
 CP="${CP}:target/classes"
 
 #DEBUG="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005"
-PROPS="-Dremoting.over.http=false -Dorg.wildfly.ee.namespace.interop=false"
+PROPS="-Dremoting.over.http=false -Dorg.wildfly.ee.namespace.interop=true"
 
 $JAVA_HOME/bin/java -cp $CP $DEBUG $PROPS org.junit.runner.JUnitCore org.jboss.as.quickstarts.ejb.remote.EJBRemoteIT

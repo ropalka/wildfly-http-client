@@ -20,8 +20,13 @@
 
 <configuration>
     <http-client xmlns="urn:wildfly-http-client:1.2">
+        <configs>
+            <config uri="http://localhost:8080/wildfly-services">
+                <version handler="1" specification="8"/>
+            </config>
+        </configs>
         <defaults>
-            <version handler-version="2" specification-version="10"/>
+            <version handler="2" specification="10"/>
         </defaults>
     </http-client>
     <authentication-client xmlns="urn:elytron:1.0">

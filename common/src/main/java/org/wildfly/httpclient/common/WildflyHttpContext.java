@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.security.AccessController.doPrivileged;
+import static org.wildfly.httpclient.common.EENamespaceInteroperability.EE_NAMESPACE_INTEROPERABLE_MODE;
 
 /**
  * Represents the current configured state of the HTTP contexts.
@@ -183,7 +184,7 @@ public class WildflyHttpContext implements Contextual<WildflyHttpContext> {
 
             final HttpConnectionPoolFactory httpConnectionPoolFactory;
             final HttpMarshallerFactoryProvider httpMarshallerFactoryProvider;
-            if (EENamespaceInteroperability.EE_NAMESPACE_INTEROPERABLE_MODE) {
+            if (EENamespaceInteroperability.EE_NAMESPACE_INTEROPERABLE_MODE && Version.JAVA_EE_8.equals(version)) {
                 httpConnectionPoolFactory = EENamespaceInteroperability.getHttpConnectionPoolFactory();
                 httpMarshallerFactoryProvider = EENamespaceInteroperability.getHttpMarshallerFactoryProvider();
             } else {
@@ -206,7 +207,7 @@ public class WildflyHttpContext implements Contextual<WildflyHttpContext> {
                         OptionMap.create(
                             UndertowOptions.ENABLE_HTTP2, http2,
                             Options.TCP_NODELAY, tcpNoDelay),
-                        hp, sb.getIdleTimeout() > 0 ? sb.getIdleTimeout() : idleTimout, version), eager, sb.getUri(), httpMarshallerFactoryProvider),
+                        hp, sb.getIdleTimeout() > 0 ? sb.getIdleTimeout() : idleTimout, sb.getVersion() != null ? sb.getVersion() : version), eager, sb.getUri(), httpMarshallerFactoryProvider),
                     sb.getUri());
                 connections[i] = connection;
             }
@@ -225,6 +226,9 @@ public class WildflyHttpContext implements Contextual<WildflyHttpContext> {
         }
 
         void setVersion(Version version) {
+            if (Version.JAVA_EE_8.equals(version) && !EE_NAMESPACE_INTEROPERABLE_MODE) {
+                throw HttpClientMessages.MESSAGES.javaeeToJakartaeeBackwardCompatibilityLayerDisabled();
+            }
             this.version = version;
         }
 
@@ -328,6 +332,9 @@ public class WildflyHttpContext implements Contextual<WildflyHttpContext> {
             }
 
             void setVersion(Version version) {
+                if (Version.JAVA_EE_8.equals(version) && !EE_NAMESPACE_INTEROPERABLE_MODE) {
+                    throw HttpClientMessages.MESSAGES.javaeeToJakartaeeBackwardCompatibilityLayerDisabled();
+                }
                 this.version = version;
             }
 
