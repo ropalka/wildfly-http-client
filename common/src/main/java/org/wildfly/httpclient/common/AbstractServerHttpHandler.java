@@ -124,7 +124,7 @@ public abstract class AbstractServerHttpHandler implements HttpHandler {
     }
 
     protected HttpMarshallerFactory getHttpMarshallerFactory(final HttpServerExchange exchange) {
-        return Version.JAVA_EE_8.equals(getVersion(exchange)) ? INTEROPERABLE_FACTORY : DEFAULT_FACTORY;
+        return Version.JAVA_EE_8 == getVersion(exchange) ? INTEROPERABLE_FACTORY : DEFAULT_FACTORY;
     }
 
     protected ContentType getRequiredContentType() {
