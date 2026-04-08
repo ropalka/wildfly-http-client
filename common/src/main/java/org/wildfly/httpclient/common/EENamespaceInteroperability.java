@@ -20,7 +20,6 @@ package org.wildfly.httpclient.common;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.util.AbstractAttachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HttpString;
 import org.wildfly.security.manager.WildFlySecurityManager;
@@ -82,27 +81,6 @@ final class EENamespaceInteroperability {
         versionPathHandler.addPrefixPath(VERSION_ONE_PATH, interoperabilityHandler);
         versionPathHandler.addPrefixPath(VERSION_TWO_PATH, latestProtocolHandler);
         return versionPathHandler;
-    }
-
-    /**
-     * Returns the HTTPMarshallerFactoryProvider instance responsible for taking care of marshalling
-     * and unmarshalling according to the values negotiated by the ee namespace interoperability headers.
-     *
-     * @return the HTTPMarshallerFactoryProvider. All marshalling and unmarshalling done at both server
-     * and client side have to be done through a factory provided by this object.
-     */
-    static HttpMarshallerFactoryProvider getHttpMarshallerFactoryProvider() {
-        return new HttpMarshallerFactoryProvider() {
-            @Override
-            public HttpMarshallerFactory getMarshallerFactory(AbstractAttachable attachable) {
-                return attachable.getAttachment(HTTP_MARSHALLER_FACTORY_KEY);
-            }
-
-            @Override
-            public HttpMarshallerFactory getUnmarshallerFactory(AbstractAttachable attachable) {
-                return attachable.getAttachment(HTTP_UNMARSHALLER_FACTORY_KEY);
-            }
-        };
     }
 
     /*

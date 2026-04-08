@@ -23,10 +23,12 @@
         <configs>
             <config uri="http://localhost:8080/wildfly-services">
                 <version handler="1" specification="8"/>
+                <enable-http2 value="false"/>
             </config>
         </configs>
         <defaults>
             <version handler="2" specification="10"/>
+            <enable-http2 value="false"/>
         </defaults>
     </http-client>
     <authentication-client xmlns="urn:elytron:1.0">

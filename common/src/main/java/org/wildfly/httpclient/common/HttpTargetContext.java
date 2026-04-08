@@ -176,6 +176,7 @@ public class HttpTargetContext extends AbstractAttachable {
         if (sessionId != null) {
             addRequestHeader(request, COOKIE, JSESSIONID + "=" + sessionId);
         }
+        getVersion().writeTo(request);
         try {
             if (!containsRequestHeader(request, HOST)) {
                 String host;
