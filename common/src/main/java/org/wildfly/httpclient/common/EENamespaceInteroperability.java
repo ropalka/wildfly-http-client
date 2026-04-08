@@ -105,16 +105,6 @@ final class EENamespaceInteroperability {
         };
     }
 
-    /**
-     * Returns the HTTP connection pool factory when EE namespace interoperability mode is on. This factory
-     * creates EE namespace interoperable connections to the server.
-     *
-     * @return the {@link HttpConnectionPoolFactory}.
-     */
-    static HttpConnectionPoolFactory getHttpConnectionPoolFactory() {
-        return (HttpConnectionPool::new);
-    }
-
     /*
     Server side EE namespace interoperability
      */
