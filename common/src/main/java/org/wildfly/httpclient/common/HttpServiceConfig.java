@@ -18,8 +18,10 @@
 package org.wildfly.httpclient.common;
 
 import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.PathHandler;
 
-import java.util.function.Function;
+import static org.wildfly.httpclient.common.Protocol.VERSION_ONE_PATH;
+import static org.wildfly.httpclient.common.Protocol.VERSION_TWO_PATH;
 
 /**
  * Mode configuration for http services.
@@ -34,7 +36,7 @@ public enum HttpServiceConfig {
     /**
      * Default configuration. Used by both EE namespace interoperable and non-interoperable servers
      */
-    DEFAULT (EENamespaceInteroperability::createInteroperabilityHandler);
+    DEFAULT;
 
     /**
      * Returns the default configuration.
@@ -43,12 +45,6 @@ public enum HttpServiceConfig {
      */
     public static HttpServiceConfig getInstance() {
         return DEFAULT;
-    }
-
-    private final Function<HttpHandler, HttpHandler> handlerWrapper;
-
-    HttpServiceConfig(Function<HttpHandler, HttpHandler> handlerWrapper) {
-        this.handlerWrapper = handlerWrapper;
     }
 
     /**
@@ -62,7 +58,10 @@ public enum HttpServiceConfig {
      *         before invoking the inner {@code handler}.
      */
     public HttpHandler wrap(HttpHandler handler) {
-        return handlerWrapper.apply(handler);
+        final PathHandler versionPathHandler = new PathHandler();
+        versionPathHandler.addPrefixPath(VERSION_ONE_PATH, handler);
+        versionPathHandler.addPrefixPath(VERSION_TWO_PATH, handler);
+        return versionPathHandler;
     }
 
 }
