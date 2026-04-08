@@ -226,9 +226,6 @@ public class WildflyHttpContext implements Contextual<WildflyHttpContext> {
         }
 
         void setVersion(Version version) {
-            if (Version.JAVA_EE_8 == version && !EE_NAMESPACE_INTEROPERABLE_MODE) {
-                throw HttpClientMessages.MESSAGES.javaeeToJakartaeeBackwardCompatibilityLayerDisabled();
-            }
             this.version = version;
         }
 
@@ -332,9 +329,6 @@ public class WildflyHttpContext implements Contextual<WildflyHttpContext> {
             }
 
             void setVersion(Version version) {
-                if (Version.JAVA_EE_8 == version && !EE_NAMESPACE_INTEROPERABLE_MODE) {
-                    throw HttpClientMessages.MESSAGES.javaeeToJakartaeeBackwardCompatibilityLayerDisabled();
-                }
                 this.version = version;
             }
 
