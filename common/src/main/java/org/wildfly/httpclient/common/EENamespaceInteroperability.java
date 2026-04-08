@@ -19,7 +19,6 @@ package org.wildfly.httpclient.common;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
-import org.wildfly.security.manager.WildFlySecurityManager;
 
 import static org.wildfly.httpclient.common.Protocol.VERSION_ONE_PATH;
 import static org.wildfly.httpclient.common.Protocol.VERSION_TWO_PATH;
@@ -35,17 +34,6 @@ import static org.wildfly.httpclient.common.Protocol.VERSION_TWO_PATH;
  * @author Richard Opalka
  */
 final class EENamespaceInteroperability { // TODO: eliminate this class?
-    /**
-     * Indicates if EE namespace interoperable mode is enabled.
-     */
-    static final boolean EE_NAMESPACE_INTEROPERABLE_MODE = Boolean.parseBoolean(
-            WildFlySecurityManager.getPropertyPrivileged("org.wildfly.ee.namespace.interop", "false"));
-
-    static {
-        if (EE_NAMESPACE_INTEROPERABLE_MODE) {
-            HttpClientMessages.MESSAGES.javaeeToJakartaeeBackwardCompatibilityLayerInstalled();
-        }
-    }
 
     private EENamespaceInteroperability() {}
 

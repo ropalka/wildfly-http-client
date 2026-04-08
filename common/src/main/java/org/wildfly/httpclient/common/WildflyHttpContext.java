@@ -23,6 +23,7 @@ import io.undertow.connector.ByteBufferPool;
 import io.undertow.server.DefaultByteBufferPool;
 import org.wildfly.common.context.ContextManager;
 import org.wildfly.common.context.Contextual;
+import org.wildfly.security.manager.WildFlySecurityManager;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.XnioWorker;
@@ -36,7 +37,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.security.AccessController.doPrivileged;
-import static org.wildfly.httpclient.common.EENamespaceInteroperability.EE_NAMESPACE_INTEROPERABLE_MODE;
 
 /**
  * Represents the current configured state of the HTTP contexts.
@@ -47,6 +47,17 @@ import static org.wildfly.httpclient.common.EENamespaceInteroperability.EE_NAMES
 public class WildflyHttpContext implements Contextual<WildflyHttpContext> {
 
     private static final int LEAK_DETECTION = Integer.getInteger("org.wildfly.http-client.buffer-leak-detection", 0);
+    /**
+     * Indicates if EE namespace interoperable mode is enabled.
+     */
+    private static final boolean EE_NAMESPACE_INTEROPERABLE_MODE = Boolean.parseBoolean(
+            WildFlySecurityManager.getPropertyPrivileged("org.wildfly.ee.namespace.interop", "false"));
+
+    static {
+        if (EE_NAMESPACE_INTEROPERABLE_MODE) {
+            HttpClientMessages.MESSAGES.javaeeToJakartaeeBackwardCompatibilityLayerInstalled();
+        }
+    }
 
     /**
      * The context manager for HTTP endpoints.
